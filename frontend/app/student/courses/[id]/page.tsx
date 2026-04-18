@@ -5,14 +5,14 @@ import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 import { AIAssistant } from '@/components/ai-assistant';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ora';
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from '@/components/ui/card';
+} from '@/components/ora';
 import { courses, type Course } from '@/lib/api';
 
 export default function StudentCourseDetailPage() {
@@ -36,8 +36,8 @@ export default function StudentCourseDetailPage() {
     if (Number.isFinite(id)) load();
   }, [id]);
 
-  if (error) return <p className="text-sm text-destructive">{error}</p>;
-  if (!course) return <p className="text-sm text-muted-foreground">Loading…</p>;
+  if (error) return <p className="text-sm text-[var(--danger-fg)]">{error}</p>;
+  if (!course) return <p className="text-sm text-[var(--text-secondary)]">Loading…</p>;
 
   const enroll = async () => {
     try {
@@ -54,17 +54,17 @@ export default function StudentCourseDetailPage() {
     <div className="space-y-6">
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <p className="text-xs uppercase tracking-widest text-muted-foreground">
+          <p className="text-xs uppercase tracking-widest text-[var(--text-secondary)]">
             {course.code} · {course.semester || 'Semester TBD'}
           </p>
           <h1 className="text-3xl font-semibold">{course.title}</h1>
           {course.faculty_name && (
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-[var(--text-secondary)]">
               Faculty: {course.faculty_name}
             </p>
           )}
         </div>
-        <Button variant={course.enrolled ? 'secondary' : 'default'} onClick={enroll}>
+        <Button variant={course.enrolled ? 'secondary' : 'primary'} onClick={enroll}>
           {course.enrolled ? 'Unenroll' : 'Enroll'}
         </Button>
       </header>
@@ -74,7 +74,7 @@ export default function StudentCourseDetailPage() {
           <CardHeader>
             <CardTitle>About this course</CardTitle>
           </CardHeader>
-          <CardContent className="text-sm text-muted-foreground whitespace-pre-wrap">
+          <CardContent className="text-sm text-[var(--text-secondary)] whitespace-pre-wrap">
             {course.description}
           </CardContent>
         </Card>
@@ -89,7 +89,7 @@ export default function StudentCourseDetailPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Button asChild variant="outline">
+            <Button asChild variant="secondary">
               <Link href={`/student/courses/${course.id}/notes`}>
                 Open notes
               </Link>
@@ -102,7 +102,7 @@ export default function StudentCourseDetailPage() {
             <CardDescription>Submit work and track grades.</CardDescription>
           </CardHeader>
           <CardContent>
-            <Button asChild variant="outline">
+            <Button asChild variant="secondary">
               <Link href={`/student/courses/${course.id}/assignments`}>
                 Open assignments
               </Link>

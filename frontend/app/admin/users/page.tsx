@@ -8,7 +8,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from '@/components/ui/card';
+} from '@/components/ora';
 import { users, type User } from '@/lib/api';
 
 export default function AdminUsersPage() {
@@ -29,9 +29,9 @@ export default function AdminUsersPage() {
   return (
     <div className="space-y-4">
       <h1 className="text-2xl font-semibold">Users</h1>
-      {error && <p className="text-sm text-destructive">{error}</p>}
+      {error && <p className="text-sm text-[var(--danger-fg)]">{error}</p>}
       {loading ? (
-        <p className="text-sm text-muted-foreground">Loading…</p>
+        <p className="text-sm text-[var(--text-secondary)]">Loading…</p>
       ) : (
         <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
           {items.map((u) => (
@@ -40,7 +40,7 @@ export default function AdminUsersPage() {
                 <CardTitle className="text-base">{u.name}</CardTitle>
                 <CardDescription>{u.email}</CardDescription>
               </CardHeader>
-              <CardContent className="text-xs text-muted-foreground">
+              <CardContent className="text-xs text-[var(--text-secondary)]">
                 Role: {u.role} · {u.is_active ? 'active' : 'disabled'}
               </CardContent>
             </Card>

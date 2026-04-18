@@ -4,14 +4,14 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ora';
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from '@/components/ui/card';
+} from '@/components/ora';
 import { courses, type Course, type UserBrief } from '@/lib/api';
 
 export default function FacultyCourseDetailPage() {
@@ -39,18 +39,18 @@ export default function FacultyCourseDetailPage() {
     };
   }, [id]);
 
-  if (error) return <p className="text-sm text-destructive">{error}</p>;
-  if (!course) return <p className="text-sm text-muted-foreground">Loading…</p>;
+  if (error) return <p className="text-sm text-[var(--danger-fg)]">{error}</p>;
+  if (!course) return <p className="text-sm text-[var(--text-secondary)]">Loading…</p>;
 
   return (
     <div className="space-y-6">
       <header>
-        <p className="text-xs uppercase tracking-widest text-muted-foreground">
+        <p className="text-xs uppercase tracking-widest text-[var(--text-secondary)]">
           {course.code} · {course.semester || 'Semester TBD'}
         </p>
         <h1 className="text-3xl font-semibold">{course.title}</h1>
         {course.description && (
-          <p className="mt-2 max-w-3xl text-sm text-muted-foreground whitespace-pre-wrap">
+          <p className="mt-2 max-w-3xl text-sm text-[var(--text-secondary)] whitespace-pre-wrap">
             {course.description}
           </p>
         )}
@@ -65,7 +65,7 @@ export default function FacultyCourseDetailPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Button asChild variant="outline">
+            <Button asChild variant="secondary">
               <Link href={`/faculty/courses/${course.id}/notes`}>
                 Manage notes
               </Link>
@@ -78,7 +78,7 @@ export default function FacultyCourseDetailPage() {
             <CardDescription>Create work and review submissions.</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-2">
-            <Button asChild variant="outline">
+            <Button asChild variant="secondary">
               <Link href={`/faculty/courses/${course.id}/assignments`}>
                 Manage assignments
               </Link>
@@ -95,7 +95,7 @@ export default function FacultyCourseDetailPage() {
             <CardTitle>Enrolled students</CardTitle>
             <CardDescription>{students.length} students</CardDescription>
           </CardHeader>
-          <CardContent className="text-sm text-muted-foreground">
+          <CardContent className="text-sm text-[var(--text-secondary)]">
             {students.length === 0
               ? 'No students enrolled yet.'
               : students

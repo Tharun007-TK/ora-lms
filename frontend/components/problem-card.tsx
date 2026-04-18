@@ -6,14 +6,14 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from '@/components/ui/card';
+} from '@/components/ora';
 import { cn } from '@/lib/utils';
 import type { JudgeProblemBrief, ProblemDifficulty } from '@/lib/api';
 
 const DIFFICULTY_STYLE: Record<ProblemDifficulty, string> = {
-  easy: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400',
-  medium: 'bg-amber-500/15 text-amber-700 dark:text-amber-400',
-  hard: 'bg-red-500/15 text-red-600 dark:text-red-400',
+  easy: 'bg-[var(--success-bg)] text-[var(--success-fg)]',
+  medium: 'bg-[var(--warning-bg)] text-[var(--warning-fg)]',
+  hard: 'bg-[var(--danger-bg)] text-[var(--danger-fg)]',
 };
 
 export function ProblemCard({
@@ -29,20 +29,23 @@ export function ProblemCard({
         <div className="flex items-center justify-between">
           <span
             className={cn(
-              'rounded-full px-2 py-0.5 text-xs font-semibold capitalize',
+              'rounded-full px-2 py-0.5 t-caption font-semibold capitalize',
               DIFFICULTY_STYLE[problem.difficulty],
             )}
           >
             {problem.difficulty}
           </span>
           {problem.solved && (
-            <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+            <span className="rounded-full bg-[var(--success-bg)] px-2 py-0.5 t-caption font-semibold text-[var(--success-fg)]">
               Solved
             </span>
           )}
         </div>
-        <CardTitle className="text-base">
-          <Link href={href} className="hover:underline">
+        <CardTitle className="t-h3">
+          <Link
+            href={href}
+            className="hover:text-[var(--ember)] transition-colors focus-ora rounded"
+          >
             {problem.title}
           </Link>
         </CardTitle>

@@ -4,7 +4,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from '@/components/ui/card';
+} from '@/components/ora';
 import { fileUrl, type Note } from '@/lib/api';
 
 export function NoteCard({
@@ -21,9 +21,12 @@ export function NoteCard({
     <Card>
       <CardHeader>
         <div className="flex items-center justify-between">
-          <CardTitle className="text-lg">{note.title}</CardTitle>
+          <CardTitle>{note.title}</CardTitle>
           {note.ai_generated && (
-            <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+            <span
+              className="rounded-full px-2 py-0.5 t-caption font-medium text-[var(--ember)]"
+              style={{ backgroundColor: 'rgba(216, 90, 48, 0.1)' }}
+            >
               AI
             </span>
           )}
@@ -32,9 +35,9 @@ export function NoteCard({
           {new Date(note.created_at).toLocaleDateString()}
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-3 text-sm">
+      <CardContent className="space-y-3">
         {note.content && (
-          <div className="whitespace-pre-wrap text-muted-foreground">
+          <div className="whitespace-pre-wrap t-body text-[var(--text-secondary)]">
             {note.content}
           </div>
         )}
@@ -43,7 +46,7 @@ export function NoteCard({
             href={url}
             target="_blank"
             rel="noreferrer"
-            className="text-sm font-medium text-primary hover:underline"
+            className="t-body-sm font-medium text-[var(--ember)] hover:underline focus-ora rounded"
           >
             Open attachment ↗
           </a>
@@ -52,7 +55,7 @@ export function NoteCard({
           <button
             type="button"
             onClick={onDelete}
-            className="text-xs text-destructive hover:underline"
+            className="t-caption text-[var(--danger-fg)] hover:underline focus-ora rounded"
           >
             Delete
           </button>

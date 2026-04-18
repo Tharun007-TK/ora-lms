@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useState } from 'react';
 
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ora';
 import {
   Card,
   CardContent,
@@ -12,9 +12,9 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+} from '@/components/ora';
+import { Input } from '@/components/ora';
+import { Label } from '@/components/ora';
 import { ai, type Note } from '@/lib/api';
 
 export default function GenerateNotesPage() {
@@ -58,12 +58,12 @@ export default function GenerateNotesPage() {
       <header className="space-y-2">
         <Link
           href={`/faculty/courses/${courseId}/notes`}
-          className="text-xs text-muted-foreground hover:underline"
+          className="text-xs text-[var(--text-secondary)] hover:underline"
         >
           ← Back to notes
         </Link>
         <h1 className="text-2xl font-semibold">AI Notes Maker</h1>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm text-[var(--text-secondary)]">
           Upload a chapter PDF. Groq converts the raw content into structured,
           student-ready Markdown notes.
         </p>
@@ -98,7 +98,7 @@ export default function GenerateNotesPage() {
                 required
               />
               {file && (
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs text-[var(--text-secondary)]">
                   {file.name} · {(file.size / 1024).toFixed(0)} KB
                 </p>
               )}
@@ -111,7 +111,7 @@ export default function GenerateNotesPage() {
               />
               Keep the source PDF attached to the note
             </label>
-            {error && <p className="text-sm text-destructive">{error}</p>}
+            {error && <p className="text-sm text-[var(--danger-fg)]">{error}</p>}
           </CardContent>
           <CardFooter className="flex justify-between">
             <Button
@@ -148,7 +148,7 @@ export default function GenerateNotesPage() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle className="text-lg">{preview.title}</CardTitle>
-              <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+              <span className="rounded-full bg-[rgba(216,90,48,0.1)] px-2 py-0.5 text-xs font-medium text-[var(--ember)]">
                 AI
               </span>
             </div>
@@ -157,7 +157,7 @@ export default function GenerateNotesPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <pre className="max-h-[480px] overflow-auto whitespace-pre-wrap rounded-md border bg-muted/30 p-4 text-sm leading-relaxed">
+            <pre className="max-h-[480px] overflow-auto whitespace-pre-wrap rounded-md border bg-[var(--surface-sunken)] p-4 text-sm leading-relaxed">
               {preview.content}
             </pre>
           </CardContent>

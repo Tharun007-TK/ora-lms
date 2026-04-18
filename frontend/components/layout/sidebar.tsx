@@ -43,12 +43,12 @@ export function Sidebar({ role }: { role: UserRole }) {
   const items = NAV[role];
 
   return (
-    <aside className="hidden w-64 shrink-0 border-r bg-card p-4 md:block">
+    <aside className="hidden w-64 shrink-0 border-hair-r bg-[var(--surface-raised)] p-4 md:block">
       <div className="mb-6 px-2">
-        <p className="text-xs uppercase tracking-widest text-muted-foreground">
-          Ora
+        <p className="t-eyebrow">Ora</p>
+        <p className="t-label capitalize text-[var(--text-primary)]">
+          {role} workspace
         </p>
-        <p className="text-sm font-semibold capitalize">{role} workspace</p>
       </div>
       <nav className="flex flex-col gap-1">
         {items.map((item) => {
@@ -59,10 +59,10 @@ export function Sidebar({ role }: { role: UserRole }) {
               key={item.href}
               href={item.href}
               className={cn(
-                'rounded-md px-3 py-2 text-sm transition-colors',
+                'rounded-md px-3 py-2 t-body-sm transition-colors focus-ora',
                 active
-                  ? 'bg-primary text-primary-foreground'
-                  : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
+                  ? 'bg-[var(--ember)] text-[var(--ember-ink)]'
+                  : 'text-[var(--text-secondary)] hover:bg-[var(--surface-sunken)] hover:text-[var(--text-primary)]',
               )}
             >
               {item.label}

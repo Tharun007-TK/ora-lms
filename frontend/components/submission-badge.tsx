@@ -1,11 +1,11 @@
 import { cn } from '@/lib/utils';
 
 const STYLES: Record<string, string> = {
-  AC: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/40',
-  WA: 'bg-red-500/15 text-red-600 dark:text-red-400 border-red-500/40',
-  TLE: 'bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/40',
-  RE: 'bg-red-500/15 text-red-600 dark:text-red-400 border-red-500/40',
-  CE: 'bg-purple-500/15 text-purple-700 dark:text-purple-400 border-purple-500/40',
+  AC: 'bg-[var(--success-bg)] text-[var(--success-fg)] border-[var(--success-fg)]/40',
+  WA: 'bg-[var(--danger-bg)] text-[var(--danger-fg)] border-[var(--danger-fg)]/40',
+  TLE: 'bg-[var(--warning-bg)] text-[var(--warning-fg)] border-[var(--warning-fg)]/40',
+  RE: 'bg-[var(--danger-bg)] text-[var(--danger-fg)] border-[var(--danger-fg)]/40',
+  CE: 'bg-[var(--info-bg)] text-[var(--info-fg)] border-[var(--info-fg)]/40',
 };
 
 export function SubmissionBadge({
@@ -15,11 +15,13 @@ export function SubmissionBadge({
   verdict: string;
   className?: string;
 }) {
-  const style = STYLES[verdict] || 'bg-muted text-muted-foreground border-border';
+  const style =
+    STYLES[verdict] ||
+    'bg-[var(--surface-sunken)] text-[var(--text-muted)] border-[var(--surface-border)]';
   return (
     <span
       className={cn(
-        'inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold',
+        'inline-flex items-center rounded-full border px-2 py-0.5 t-caption font-semibold',
         style,
         className,
       )}

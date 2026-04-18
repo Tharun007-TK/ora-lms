@@ -6,14 +6,14 @@ import { useParams } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 
 import { SubmissionBadge } from '@/components/submission-badge';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ora';
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from '@/components/ui/card';
+} from '@/components/ora';
 import {
   judge,
   LANGUAGES,
@@ -24,7 +24,7 @@ import {
 const MonacoEditor = dynamic(() => import('@monaco-editor/react'), {
   ssr: false,
   loading: () => (
-    <div className="h-[420px] w-full rounded-md border bg-muted/30" />
+    <div className="h-[420px] w-full rounded-md border bg-[var(--surface-sunken)]" />
   ),
 });
 
@@ -101,12 +101,12 @@ export default function StudentProblemPage() {
   };
 
   if (loading) {
-    return <p className="text-sm text-muted-foreground">Loading…</p>;
+    return <p className="text-sm text-[var(--text-secondary)]">Loading…</p>;
   }
   if (error || !problem) {
     return (
       <div className="space-y-3">
-        <p className="text-sm text-destructive">{error || 'Problem not found.'}</p>
+        <p className="text-sm text-[var(--danger-fg)]">{error || 'Problem not found.'}</p>
         <Link href="/student/judge" className="text-sm underline">
           Back to list
         </Link>
@@ -119,7 +119,7 @@ export default function StudentProblemPage() {
       <header className="space-y-2">
         <Link
           href="/student/judge"
-          className="text-xs text-muted-foreground hover:underline"
+          className="text-xs text-[var(--text-secondary)] hover:underline"
         >
           ← Back to problems
         </Link>
@@ -145,7 +145,7 @@ export default function StudentProblemPage() {
             <CardHeader>
               <CardTitle className="text-base">Description</CardTitle>
             </CardHeader>
-            <CardContent className="whitespace-pre-wrap text-sm text-muted-foreground">
+            <CardContent className="whitespace-pre-wrap text-sm text-[var(--text-secondary)]">
               {problem.description}
             </CardContent>
           </Card>
@@ -155,7 +155,7 @@ export default function StudentProblemPage() {
                 <CardTitle className="text-base">Examples</CardTitle>
               </CardHeader>
               <CardContent>
-                <pre className="whitespace-pre-wrap rounded-md border bg-muted/30 p-3 text-xs">
+                <pre className="whitespace-pre-wrap rounded-md border bg-[var(--surface-sunken)] p-3 text-xs">
                   {problem.examples}
                 </pre>
               </CardContent>
@@ -166,7 +166,7 @@ export default function StudentProblemPage() {
               <CardHeader>
                 <CardTitle className="text-base">Constraints</CardTitle>
               </CardHeader>
-              <CardContent className="whitespace-pre-wrap text-sm text-muted-foreground">
+              <CardContent className="whitespace-pre-wrap text-sm text-[var(--text-secondary)]">
                 {problem.constraints}
               </CardContent>
             </Card>
@@ -182,16 +182,16 @@ export default function StudentProblemPage() {
               <CardContent className="space-y-3">
                 {problem.testcases.map((tc, i) => (
                   <div key={tc.id} className="rounded-md border p-3 text-xs">
-                    <p className="text-muted-foreground">Case {i + 1}</p>
+                    <p className="text-[var(--text-secondary)]">Case {i + 1}</p>
                     <div className="mt-2 grid gap-2 md:grid-cols-2">
                       <div>
-                        <p className="text-[10px] uppercase text-muted-foreground">
+                        <p className="text-[10px] uppercase text-[var(--text-secondary)]">
                           Input
                         </p>
                         <pre className="whitespace-pre-wrap">{tc.input}</pre>
                       </div>
                       <div>
-                        <p className="text-[10px] uppercase text-muted-foreground">
+                        <p className="text-[10px] uppercase text-[var(--text-secondary)]">
                           Expected
                         </p>
                         <pre className="whitespace-pre-wrap">
@@ -213,7 +213,7 @@ export default function StudentProblemPage() {
               <select
                 value={languageId}
                 onChange={(e) => onLanguageChange(Number(e.target.value))}
-                className="rounded-md border border-input bg-background px-2 py-1 text-sm"
+                className="rounded-md border border-[var(--surface-border)] bg-[var(--surface-base)] px-2 py-1 text-sm"
               >
                 {LANGUAGES.map((l) => (
                   <option key={l.id} value={l.id}>
@@ -243,7 +243,7 @@ export default function StudentProblemPage() {
                   {submitting ? 'Judging…' : 'Submit'}
                 </Button>
               </div>
-              {error && <p className="mt-2 text-sm text-destructive">{error}</p>}
+              {error && <p className="mt-2 text-sm text-[var(--danger-fg)]">{error}</p>}
             </CardContent>
           </Card>
 
@@ -254,23 +254,23 @@ export default function StudentProblemPage() {
                 <SubmissionBadge verdict={result.status} />
               </CardHeader>
               <CardContent className="space-y-2 text-sm">
-                <p className="text-muted-foreground">
+                <p className="text-[var(--text-secondary)]">
                   {result.time_ms !== null && `${result.time_ms} ms · `}
                   {result.memory_kb !== null && `${result.memory_kb} KB`}
                 </p>
                 {result.stdout && (
                   <div>
-                    <p className="text-xs uppercase text-muted-foreground">
+                    <p className="text-xs uppercase text-[var(--text-secondary)]">
                       stdout
                     </p>
-                    <pre className="whitespace-pre-wrap rounded-md border bg-muted/30 p-2 text-xs">
+                    <pre className="whitespace-pre-wrap rounded-md border bg-[var(--surface-sunken)] p-2 text-xs">
                       {result.stdout}
                     </pre>
                   </div>
                 )}
                 {result.stderr && (
                   <div>
-                    <p className="text-xs uppercase text-muted-foreground">
+                    <p className="text-xs uppercase text-[var(--text-secondary)]">
                       stderr
                     </p>
                     <pre className="whitespace-pre-wrap rounded-md border bg-red-500/5 p-2 text-xs text-red-600 dark:text-red-400">
@@ -296,11 +296,11 @@ export default function StudentProblemPage() {
                     >
                       <div>
                         <SubmissionBadge verdict={s.status} />
-                        <span className="ml-2 text-xs text-muted-foreground">
+                        <span className="ml-2 text-xs text-[var(--text-secondary)]">
                           {new Date(s.submitted_at).toLocaleString()}
                         </span>
                       </div>
-                      <span className="text-xs text-muted-foreground">
+                      <span className="text-xs text-[var(--text-secondary)]">
                         {LANGUAGES.find((l) => l.id === s.language_id)?.name ||
                           s.language_id}
                       </span>

@@ -38,7 +38,7 @@ export default function StudentNotesPage() {
       <header className="space-y-2">
         <Link
           href={`/student/courses/${courseId}`}
-          className="text-xs text-muted-foreground hover:underline"
+          className="text-xs text-[var(--text-secondary)] hover:underline"
         >
           ← Back to course
         </Link>
@@ -46,11 +46,11 @@ export default function StudentNotesPage() {
       </header>
 
       {loading ? (
-        <p className="text-sm text-muted-foreground">Loading…</p>
+        <p className="text-sm text-[var(--text-secondary)]">Loading…</p>
       ) : error ? (
-        <p className="text-sm text-destructive">{error}</p>
+        <p className="text-sm text-[var(--danger-fg)]">{error}</p>
       ) : items.length === 0 ? (
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm text-[var(--text-secondary)]">
           No notes have been published for this course yet.
         </p>
       ) : (

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ora';
 import { API_URL } from '@/lib/api';
 
 interface Source {
@@ -122,7 +122,7 @@ export function AIAssistant({ courseId }: { courseId: number }) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="fixed bottom-6 right-6 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-transform hover:scale-105"
+        className="fixed bottom-6 right-6 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-[var(--ember)] text-[var(--ember-ink)] shadow-lg transition-transform hover:scale-105"
         aria-label="Open Ora AI Assistant"
       >
         <span className="text-xl font-semibold">✨</span>
@@ -134,20 +134,20 @@ export function AIAssistant({ courseId }: { courseId: number }) {
           onClick={() => setOpen(false)}
         >
           <div
-            className="absolute bottom-0 left-0 right-0 flex h-[80vh] flex-col rounded-t-2xl border-t bg-background shadow-2xl sm:bottom-6 sm:left-auto sm:right-6 sm:h-[640px] sm:w-[420px] sm:rounded-2xl sm:border"
+            className="absolute bottom-0 left-0 right-0 flex h-[80vh] flex-col rounded-t-2xl border-t bg-[var(--surface-base)] shadow-2xl sm:bottom-6 sm:left-auto sm:right-6 sm:h-[640px] sm:w-[420px] sm:rounded-2xl sm:border"
             onClick={(e) => e.stopPropagation()}
           >
             <header className="flex items-center justify-between border-b px-4 py-3">
               <div>
                 <p className="text-sm font-semibold">Ora AI</p>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs text-[var(--text-secondary)]">
                   Ask about this course
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => setOpen(false)}
-                className="text-sm text-muted-foreground hover:text-foreground"
+                className="text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
                 aria-label="Close"
               >
                 ✕
@@ -159,7 +159,7 @@ export function AIAssistant({ courseId }: { courseId: number }) {
               className="flex-1 space-y-4 overflow-y-auto px-4 py-4 text-sm"
             >
               {messages.length === 0 && (
-                <div className="rounded-lg bg-muted/40 p-3 text-muted-foreground">
+                <div className="rounded-lg bg-[var(--surface-sunken)]/40 p-3 text-[var(--text-secondary)]">
                   Ask a question grounded in this course's notes. I'll cite
                   which notes I used.
                 </div>
@@ -168,7 +168,7 @@ export function AIAssistant({ courseId }: { courseId: number }) {
                 <Bubble key={i} message={m} />
               ))}
               {error && (
-                <p className="text-xs text-destructive">{error}</p>
+                <p className="text-xs text-[var(--danger-fg)]">{error}</p>
               )}
             </div>
 
@@ -182,13 +182,13 @@ export function AIAssistant({ courseId }: { courseId: number }) {
                   onChange={(e) => setInput(e.target.value)}
                   placeholder="e.g. Explain BFS vs DFS"
                   disabled={streaming}
-                  className="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className="flex-1 rounded-md border border-[var(--surface-border)] bg-[var(--surface-base)] px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ember)]"
                 />
                 <Button type="submit" disabled={streaming || !input.trim()}>
                   {streaming ? '…' : 'Ask'}
                 </Button>
               </div>
-              <p className="mt-2 text-center text-[10px] uppercase tracking-widest text-muted-foreground">
+              <p className="mt-2 text-center text-[10px] uppercase tracking-widest text-[var(--text-secondary)]">
                 Powered by Ora AI
               </p>
             </form>
@@ -207,8 +207,8 @@ function Bubble({ message }: { message: Message }) {
         className={
           'inline-block max-w-[90%] whitespace-pre-wrap rounded-lg px-3 py-2 ' +
           (isUser
-            ? 'bg-primary text-primary-foreground'
-            : 'bg-muted text-foreground')
+            ? 'bg-[var(--ember)] text-[var(--ember-ink)]'
+            : 'bg-[var(--surface-sunken)] text-[var(--text-primary)]')
         }
       >
         {message.pending && !message.content ? (
@@ -222,7 +222,7 @@ function Bubble({ message }: { message: Message }) {
         )}
       </div>
       {!isUser && message.sources && message.sources.length > 0 && (
-        <p className="mt-1 text-[10px] text-muted-foreground">
+        <p className="mt-1 text-[10px] text-[var(--text-secondary)]">
           Sources:{' '}
           {message.sources.map((s, i) => (
             <span key={`${s.note_id}-${i}`}>

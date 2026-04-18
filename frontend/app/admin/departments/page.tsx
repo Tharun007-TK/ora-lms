@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from 'react';
 
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ora';
+import { Input } from '@/components/ora';
+import { Label } from '@/components/ora';
 import { college, type Department } from '@/lib/api';
 
 export default function AdminDepartmentsPage() {
@@ -67,14 +67,14 @@ export default function AdminDepartmentsPage() {
     <div className="space-y-8">
       <header>
         <h1 className="text-2xl font-semibold">Departments</h1>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm text-[var(--text-secondary)]">
           Departments appear on the public college pages.
         </p>
       </header>
 
       <form
         onSubmit={onCreate}
-        className="grid gap-3 rounded-lg border bg-card p-4 sm:grid-cols-4 sm:items-end"
+        className="grid gap-3 rounded-lg border bg-[var(--surface-raised)] p-4 sm:grid-cols-4 sm:items-end"
       >
         <div className="space-y-1.5 sm:col-span-2">
           <Label htmlFor="name">Name</Label>
@@ -108,16 +108,16 @@ export default function AdminDepartmentsPage() {
         </div>
       </form>
 
-      {error && <p className="text-sm text-destructive">{error}</p>}
+      {error && <p className="text-sm text-[var(--danger-fg)]">{error}</p>}
 
       {loading ? (
-        <p className="text-sm text-muted-foreground">Loading…</p>
+        <p className="text-sm text-[var(--text-secondary)]">Loading…</p>
       ) : items.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No departments yet.</p>
+        <p className="text-sm text-[var(--text-secondary)]">No departments yet.</p>
       ) : (
         <div className="overflow-hidden rounded-lg border">
           <table className="w-full text-sm">
-            <thead className="bg-muted/50 text-left text-xs uppercase text-muted-foreground">
+            <thead className="bg-[var(--surface-sunken)] text-left text-xs uppercase text-[var(--text-secondary)]">
               <tr>
                 <th className="px-4 py-2">Code</th>
                 <th className="px-4 py-2">Name</th>
@@ -130,13 +130,13 @@ export default function AdminDepartmentsPage() {
                 <tr key={d.id} className="border-t">
                   <td className="px-4 py-2 font-medium">{d.code}</td>
                   <td className="px-4 py-2">{d.name}</td>
-                  <td className="px-4 py-2 text-muted-foreground">
+                  <td className="px-4 py-2 text-[var(--text-secondary)]">
                     {d.description || '—'}
                   </td>
                   <td className="px-4 py-2 text-right">
                     <Button
                       size="sm"
-                      variant="destructive"
+                      variant="danger"
                       onClick={() => onDelete(d.id)}
                     >
                       Delete

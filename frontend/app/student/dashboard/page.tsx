@@ -51,17 +51,17 @@ export default function StudentDashboardPage() {
           <h1 className="text-2xl font-semibold">Your courses</h1>
           <Link
             href="/student/courses"
-            className="text-sm font-medium text-primary hover:underline"
+            className="text-sm font-medium text-[var(--ember)] hover:underline"
           >
             Browse all →
           </Link>
         </div>
         {loading ? (
-          <p className="text-sm text-muted-foreground">Loading…</p>
+          <p className="text-sm text-[var(--text-secondary)]">Loading…</p>
         ) : error ? (
-          <p className="text-sm text-destructive">{error}</p>
+          <p className="text-sm text-[var(--danger-fg)]">{error}</p>
         ) : myCourses.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-[var(--text-secondary)]">
             You are not enrolled in any courses yet. Browse the catalog to join one.
           </p>
         ) : (
@@ -80,7 +80,7 @@ export default function StudentDashboardPage() {
       <section>
         <h2 className="mb-4 text-xl font-semibold">Upcoming assignments</h2>
         {upcoming.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-[var(--text-secondary)]">
             All caught up — no pending submissions.
           </p>
         ) : (

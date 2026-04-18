@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ora';
 import {
   Card,
   CardContent,
@@ -12,9 +12,9 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+} from '@/components/ora';
+import { Input } from '@/components/ora';
+import { Label } from '@/components/ora';
 import {
   assignments,
   fileUrl,
@@ -97,7 +97,7 @@ export default function FacultySubmissionsPage() {
       <header className="space-y-2">
         <Link
           href={`/faculty/courses/${courseId}/assignments`}
-          className="text-xs text-muted-foreground hover:underline"
+          className="text-xs text-[var(--text-secondary)] hover:underline"
         >
           ← Back to assignments
         </Link>
@@ -105,19 +105,19 @@ export default function FacultySubmissionsPage() {
           Submissions{assignment ? ` · ${assignment.title}` : ''}
         </h1>
         {assignment && (
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-[var(--text-secondary)]">
             Due {new Date(assignment.due_date).toLocaleString()} · max{' '}
             {assignment.max_marks} marks
           </p>
         )}
       </header>
 
-      {error && <p className="text-sm text-destructive">{error}</p>}
+      {error && <p className="text-sm text-[var(--danger-fg)]">{error}</p>}
 
       {loading ? (
-        <p className="text-sm text-muted-foreground">Loading…</p>
+        <p className="text-sm text-[var(--text-secondary)]">Loading…</p>
       ) : items.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No submissions yet.</p>
+        <p className="text-sm text-[var(--text-secondary)]">No submissions yet.</p>
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
           {items.map((s) => {
@@ -139,7 +139,7 @@ export default function FacultySubmissionsPage() {
                       href={url}
                       target="_blank"
                       rel="noreferrer"
-                      className="text-sm font-medium text-primary hover:underline"
+                      className="text-sm font-medium text-[var(--ember)] hover:underline"
                     >
                       Open submission ↗
                     </a>
@@ -184,7 +184,7 @@ export default function FacultySubmissionsPage() {
                     </div>
                   </div>
                   {s.graded_at && (
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-xs text-[var(--text-secondary)]">
                       Last graded {new Date(s.graded_at).toLocaleString()}
                     </p>
                   )}

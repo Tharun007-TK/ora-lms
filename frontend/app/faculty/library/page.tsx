@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 
 import { BookCard } from '@/components/book-card';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ora';
 import { library, type LibraryBook } from '@/lib/api';
 
 export default function FacultyLibraryPage() {
@@ -44,7 +44,7 @@ export default function FacultyLibraryPage() {
       <header className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold">Library</h1>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-[var(--text-secondary)]">
             Upload books for your students to read.
           </p>
         </div>
@@ -54,11 +54,11 @@ export default function FacultyLibraryPage() {
       </header>
 
       {loading ? (
-        <p className="text-sm text-muted-foreground">Loading…</p>
+        <p className="text-sm text-[var(--text-secondary)]">Loading…</p>
       ) : error ? (
-        <p className="text-sm text-destructive">{error}</p>
+        <p className="text-sm text-[var(--danger-fg)]">{error}</p>
       ) : items.length === 0 ? (
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm text-[var(--text-secondary)]">
           Nothing uploaded yet. Hit “Upload book” to add one.
         </p>
       ) : (
@@ -69,7 +69,7 @@ export default function FacultyLibraryPage() {
               book={b}
               href={`/student/library/${b.id}`}
               footer={
-                <Button size="sm" variant="destructive" onClick={() => onDelete(b.id)}>
+                <Button size="sm" variant="danger" onClick={() => onDelete(b.id)}>
                   Delete
                 </Button>
               }

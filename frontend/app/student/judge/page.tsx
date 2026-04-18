@@ -36,7 +36,7 @@ export default function StudentJudgePage() {
     <div className="space-y-6">
       <header>
         <h1 className="text-2xl font-semibold">Code Judge</h1>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm text-[var(--text-secondary)]">
           Pick a problem and submit your solution. Verdicts show AC / WA / TLE
           / RE / CE.
         </p>
@@ -49,8 +49,8 @@ export default function StudentJudgePage() {
             onClick={() => setFilter(f)}
             className={`rounded-full px-3 py-1 text-xs capitalize ${
               filter === f
-                ? 'bg-primary text-primary-foreground'
-                : 'bg-secondary text-secondary-foreground hover:bg-accent'
+                ? 'bg-[var(--ember)] text-[var(--ember-ink)]'
+                : 'bg-[var(--surface-sunken)] text-[var(--text-secondary)] hover:bg-[var(--surface-sunken)]'
             }`}
           >
             {f}
@@ -59,11 +59,11 @@ export default function StudentJudgePage() {
       </div>
 
       {loading ? (
-        <p className="text-sm text-muted-foreground">Loading…</p>
+        <p className="text-sm text-[var(--text-secondary)]">Loading…</p>
       ) : error ? (
-        <p className="text-sm text-destructive">{error}</p>
+        <p className="text-sm text-[var(--danger-fg)]">{error}</p>
       ) : filtered.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No problems match.</p>
+        <p className="text-sm text-[var(--text-secondary)]">No problems match.</p>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((p) => (

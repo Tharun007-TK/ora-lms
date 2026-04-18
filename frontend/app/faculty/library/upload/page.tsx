@@ -3,9 +3,9 @@
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ora';
+import { Input } from '@/components/ora';
+import { Label } from '@/components/ora';
 import { library } from '@/lib/api';
 
 export default function LibraryUploadPage() {
@@ -45,7 +45,7 @@ export default function LibraryUploadPage() {
     <div className="max-w-xl space-y-6">
       <header>
         <h1 className="text-2xl font-semibold">Upload book</h1>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm text-[var(--text-secondary)]">
           PDF is required. Cover image is optional.
         </p>
       </header>
@@ -98,7 +98,7 @@ export default function LibraryUploadPage() {
           />
         </div>
 
-        {error && <p className="text-sm text-destructive">{error}</p>}
+        {error && <p className="text-sm text-[var(--danger-fg)]">{error}</p>}
 
         <div className="flex gap-3">
           <Button type="submit" disabled={submitting}>

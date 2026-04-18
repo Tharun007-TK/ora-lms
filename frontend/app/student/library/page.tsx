@@ -3,8 +3,8 @@
 import { useEffect, useMemo, useState } from 'react';
 
 import { BookCard } from '@/components/book-card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ora';
+import { Input } from '@/components/ora';
 import { library, type LibraryBook } from '@/lib/api';
 
 export default function StudentLibraryPage() {
@@ -46,7 +46,7 @@ export default function StudentLibraryPage() {
     <div className="space-y-6">
       <header className="flex flex-col gap-2">
         <h1 className="text-2xl font-semibold">Library</h1>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm text-[var(--text-secondary)]">
           Browse books uploaded by faculty. Download via the book page.
         </p>
       </header>
@@ -78,8 +78,8 @@ export default function StudentLibraryPage() {
               onClick={() => setCategory(c === 'All' ? null : c)}
               className={`rounded-full px-3 py-1 text-xs transition-colors ${
                 active
-                  ? 'bg-primary text-primary-foreground'
-                  : 'bg-secondary text-secondary-foreground hover:bg-accent'
+                  ? 'bg-[var(--ember)] text-[var(--ember-ink)]'
+                  : 'bg-[var(--surface-sunken)] text-[var(--text-secondary)] hover:bg-[var(--surface-sunken)]'
               }`}
             >
               {c}
@@ -89,11 +89,11 @@ export default function StudentLibraryPage() {
       </div>
 
       {loading ? (
-        <p className="text-sm text-muted-foreground">Loading…</p>
+        <p className="text-sm text-[var(--text-secondary)]">Loading…</p>
       ) : error ? (
-        <p className="text-sm text-destructive">{error}</p>
+        <p className="text-sm text-[var(--danger-fg)]">{error}</p>
       ) : items.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No books match your filters.</p>
+        <p className="text-sm text-[var(--text-secondary)]">No books match your filters.</p>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
           {items.map((b) => (

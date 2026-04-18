@@ -3,7 +3,7 @@
 import { useParams, useRouter } from 'next/navigation';
 import { useState } from 'react';
 
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ora';
 import {
   Card,
   CardContent,
@@ -11,9 +11,9 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+} from '@/components/ora';
+import { Input } from '@/components/ora';
+import { Label } from '@/components/ora';
 import { assignments } from '@/lib/api';
 
 export default function NewAssignmentPage() {
@@ -77,7 +77,7 @@ export default function NewAssignmentPage() {
               rows={5}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="flex w-full rounded-md border border-[var(--surface-border)] bg-[var(--surface-base)] px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ember)]"
             />
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
@@ -102,10 +102,10 @@ export default function NewAssignmentPage() {
               />
             </div>
           </div>
-          {error && <p className="text-sm text-destructive">{error}</p>}
+          {error && <p className="text-sm text-[var(--danger-fg)]">{error}</p>}
         </CardContent>
         <CardFooter className="flex justify-end gap-2">
-          <Button variant="outline" onClick={() => router.back()}>
+          <Button variant="secondary" onClick={() => router.back()}>
             Cancel
           </Button>
           <Button onClick={submit} disabled={saving}>

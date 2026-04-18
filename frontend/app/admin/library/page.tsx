@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 
 import { BookCard } from '@/components/book-card';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ora';
 import { library, type LibraryBook } from '@/lib/api';
 
 export default function AdminLibraryPage() {
@@ -41,17 +41,17 @@ export default function AdminLibraryPage() {
     <div className="space-y-6">
       <header>
         <h1 className="text-2xl font-semibold">Library</h1>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm text-[var(--text-secondary)]">
           All uploads across faculty. Admins can remove any book.
         </p>
       </header>
 
       {loading ? (
-        <p className="text-sm text-muted-foreground">Loading…</p>
+        <p className="text-sm text-[var(--text-secondary)]">Loading…</p>
       ) : error ? (
-        <p className="text-sm text-destructive">{error}</p>
+        <p className="text-sm text-[var(--danger-fg)]">{error}</p>
       ) : items.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No books uploaded yet.</p>
+        <p className="text-sm text-[var(--text-secondary)]">No books uploaded yet.</p>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
           {items.map((b) => (
@@ -62,7 +62,7 @@ export default function AdminLibraryPage() {
               footer={
                 <Button
                   size="sm"
-                  variant="destructive"
+                  variant="danger"
                   onClick={() => onDelete(b.id)}
                 >
                   Delete

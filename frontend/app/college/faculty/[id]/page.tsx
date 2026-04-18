@@ -34,14 +34,14 @@ export default async function FacultyDetailPage({
               ? `/college/departments/${profile.department_id}`
               : '/college'
           }
-          className="text-xs text-muted-foreground hover:underline"
+          className="text-xs text-[var(--text-secondary)] hover:underline"
         >
           ← Back
         </Link>
       </div>
 
       <header className="flex flex-col gap-6 sm:flex-row sm:items-start">
-        <div className="h-40 w-40 shrink-0 overflow-hidden rounded-lg border bg-muted">
+        <div className="h-40 w-40 shrink-0 overflow-hidden rounded-lg border bg-[var(--surface-sunken)]">
           {photo ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -50,7 +50,7 @@ export default async function FacultyDetailPage({
               className="h-full w-full object-cover"
             />
           ) : (
-            <div className="flex h-full w-full items-center justify-center text-5xl font-semibold text-muted-foreground">
+            <div className="flex h-full w-full items-center justify-center text-5xl font-semibold text-[var(--text-secondary)]">
               {profile.name.charAt(0)}
             </div>
           )}
@@ -58,7 +58,7 @@ export default async function FacultyDetailPage({
         <div className="space-y-2">
           <h1 className="text-3xl font-semibold">{profile.name}</h1>
           {profile.designation && (
-            <p className="text-base text-muted-foreground">
+            <p className="text-base text-[var(--text-secondary)]">
               {profile.designation}
             </p>
           )}
@@ -66,22 +66,22 @@ export default async function FacultyDetailPage({
             <p className="text-sm">
               <Link
                 href={`/college/departments/${profile.department_id}`}
-                className="text-primary hover:underline"
+                className="text-[var(--ember)] hover:underline"
               >
                 {profile.department_name}
               </Link>
             </p>
           )}
-          <p className="text-xs text-muted-foreground">{profile.email}</p>
+          <p className="text-xs text-[var(--text-secondary)]">{profile.email}</p>
         </div>
       </header>
 
       {profile.qualifications && (
         <section className="space-y-2">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-primary">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--ember)]">
             Qualifications
           </h2>
-          <p className="whitespace-pre-line text-sm text-muted-foreground">
+          <p className="whitespace-pre-line text-sm text-[var(--text-secondary)]">
             {profile.qualifications}
           </p>
         </section>
@@ -89,10 +89,10 @@ export default async function FacultyDetailPage({
 
       {profile.achievements && (
         <section className="space-y-2">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-primary">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--ember)]">
             Achievements
           </h2>
-          <p className="whitespace-pre-line text-sm text-muted-foreground">
+          <p className="whitespace-pre-line text-sm text-[var(--text-secondary)]">
             {profile.achievements}
           </p>
         </section>

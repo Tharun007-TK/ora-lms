@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ora';
 import { judge, type JudgeProblemBrief } from '@/lib/api';
 
 export default function AdminJudgeProblemsPage() {
@@ -42,7 +42,7 @@ export default function AdminJudgeProblemsPage() {
       <header className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold">Judge problems</h1>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-[var(--text-secondary)]">
             Create problems with visible + hidden testcases.
           </p>
         </div>
@@ -51,16 +51,16 @@ export default function AdminJudgeProblemsPage() {
         </Link>
       </header>
 
-      {error && <p className="text-sm text-destructive">{error}</p>}
+      {error && <p className="text-sm text-[var(--danger-fg)]">{error}</p>}
 
       {loading ? (
-        <p className="text-sm text-muted-foreground">Loading…</p>
+        <p className="text-sm text-[var(--text-secondary)]">Loading…</p>
       ) : items.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No problems yet.</p>
+        <p className="text-sm text-[var(--text-secondary)]">No problems yet.</p>
       ) : (
         <div className="overflow-hidden rounded-lg border">
           <table className="w-full text-sm">
-            <thead className="bg-muted/50 text-left text-xs uppercase text-muted-foreground">
+            <thead className="bg-[var(--surface-sunken)] text-left text-xs uppercase text-[var(--text-secondary)]">
               <tr>
                 <th className="px-4 py-2">Title</th>
                 <th className="px-4 py-2">Difficulty</th>
@@ -73,13 +73,13 @@ export default function AdminJudgeProblemsPage() {
                 <tr key={p.id} className="border-t">
                   <td className="px-4 py-2 font-medium">{p.title}</td>
                   <td className="px-4 py-2 capitalize">{p.difficulty}</td>
-                  <td className="px-4 py-2 text-muted-foreground">
+                  <td className="px-4 py-2 text-[var(--text-secondary)]">
                     {new Date(p.created_at).toLocaleDateString()}
                   </td>
                   <td className="px-4 py-2 text-right">
                     <Button
                       size="sm"
-                      variant="destructive"
+                      variant="danger"
                       onClick={() => onDelete(p.id)}
                     >
                       Delete

@@ -1,4 +1,4 @@
-import { Skeleton } from '@/components/ui/skeleton';
+import { Skeleton } from '@/components/ora';
 
 export default function AdminLoading() {
   return (
@@ -6,7 +6,7 @@ export default function AdminLoading() {
       <Skeleton className="h-8 w-40" />
       <Skeleton className="h-4 w-64" />
       <div className="overflow-hidden rounded-lg border">
-        <div className="border-b bg-muted/30 px-4 py-3">
+        <div className="border-b bg-[var(--surface-sunken)] px-4 py-3">
           <Skeleton className="h-4 w-32" />
         </div>
         {[0, 1, 2, 3, 4].map((i) => (

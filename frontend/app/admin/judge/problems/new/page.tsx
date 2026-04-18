@@ -3,9 +3,9 @@
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ora';
+import { Input } from '@/components/ora';
+import { Label } from '@/components/ora';
 import { judge, type ProblemDifficulty } from '@/lib/api';
 
 interface TestcaseDraft {
@@ -75,7 +75,7 @@ export default function NewProblemPage() {
     <div className="max-w-3xl space-y-6">
       <header>
         <h1 className="text-2xl font-semibold">New problem</h1>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm text-[var(--text-secondary)]">
           Visible testcases appear in the problem page. Hidden testcases are
           only used for grading.
         </p>
@@ -100,7 +100,7 @@ export default function NewProblemPage() {
               onChange={(e) =>
                 setDifficulty(e.target.value as ProblemDifficulty)
               }
-              className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+              className="h-10 w-full rounded-md border border-[var(--surface-border)] bg-[var(--surface-base)] px-3 text-sm"
             >
               <option value="easy">Easy</option>
               <option value="medium">Medium</option>
@@ -117,7 +117,7 @@ export default function NewProblemPage() {
             onChange={(e) => setDescription(e.target.value)}
             rows={6}
             required
-            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+            className="w-full rounded-md border border-[var(--surface-border)] bg-[var(--surface-base)] px-3 py-2 text-sm"
           />
         </div>
 
@@ -128,7 +128,7 @@ export default function NewProblemPage() {
             value={examples}
             onChange={(e) => setExamples(e.target.value)}
             rows={4}
-            className="w-full rounded-md border border-input bg-background px-3 py-2 font-mono text-xs"
+            className="w-full rounded-md border border-[var(--surface-border)] bg-[var(--surface-base)] px-3 py-2 font-mono text-xs"
           />
         </div>
 
@@ -139,7 +139,7 @@ export default function NewProblemPage() {
             value={constraints}
             onChange={(e) => setConstraints(e.target.value)}
             rows={3}
-            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+            className="w-full rounded-md border border-[var(--surface-border)] bg-[var(--surface-base)] px-3 py-2 text-sm"
           />
         </div>
 
@@ -153,7 +153,7 @@ export default function NewProblemPage() {
           {testcases.map((tc, i) => (
             <div key={i} className="space-y-2 rounded-md border p-3">
               <div className="flex items-center justify-between">
-                <p className="text-xs text-muted-foreground">Case {i + 1}</p>
+                <p className="text-xs text-[var(--text-secondary)]">Case {i + 1}</p>
                 <div className="flex items-center gap-3">
                   <label className="flex items-center gap-1 text-xs">
                     <input
@@ -169,7 +169,7 @@ export default function NewProblemPage() {
                     <button
                       type="button"
                       onClick={() => removeTc(i)}
-                      className="text-xs text-destructive hover:underline"
+                      className="text-xs text-[var(--danger-fg)] hover:underline"
                     >
                       Remove
                     </button>
@@ -183,7 +183,7 @@ export default function NewProblemPage() {
                     value={tc.input}
                     onChange={(e) => updateTc(i, { input: e.target.value })}
                     rows={3}
-                    className="mt-1 w-full rounded-md border border-input bg-background px-2 py-1 font-mono text-xs"
+                    className="mt-1 w-full rounded-md border border-[var(--surface-border)] bg-[var(--surface-base)] px-2 py-1 font-mono text-xs"
                   />
                 </div>
                 <div>
@@ -194,7 +194,7 @@ export default function NewProblemPage() {
                       updateTc(i, { expected_output: e.target.value })
                     }
                     rows={3}
-                    className="mt-1 w-full rounded-md border border-input bg-background px-2 py-1 font-mono text-xs"
+                    className="mt-1 w-full rounded-md border border-[var(--surface-border)] bg-[var(--surface-base)] px-2 py-1 font-mono text-xs"
                   />
                 </div>
               </div>
@@ -202,7 +202,7 @@ export default function NewProblemPage() {
           ))}
         </div>
 
-        {error && <p className="text-sm text-destructive">{error}</p>}
+        {error && <p className="text-sm text-[var(--danger-fg)]">{error}</p>}
 
         <div className="flex gap-3">
           <Button type="submit" disabled={saving}>

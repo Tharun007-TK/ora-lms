@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ora';
 import { CourseCard } from '@/components/course-card';
 import { courses, type Course } from '@/lib/api';
 
@@ -37,11 +37,11 @@ export default function FacultyCoursesPage() {
         </Button>
       </header>
       {loading ? (
-        <p className="text-sm text-muted-foreground">Loading…</p>
+        <p className="text-sm text-[var(--text-secondary)]">Loading…</p>
       ) : error ? (
-        <p className="text-sm text-destructive">{error}</p>
+        <p className="text-sm text-[var(--danger-fg)]">{error}</p>
       ) : items.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No courses yet.</p>
+        <p className="text-sm text-[var(--text-secondary)]">No courses yet.</p>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {items.map((c) => (

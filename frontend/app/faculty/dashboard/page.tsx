@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 
 import { CourseCard } from '@/components/course-card';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ora';
 import { courses, type Course } from '@/lib/api';
 
 export default function FacultyDashboardPage() {
@@ -33,7 +33,7 @@ export default function FacultyDashboardPage() {
       <header className="flex items-start justify-between">
         <div>
           <h1 className="text-2xl font-semibold">My courses</h1>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-[var(--text-secondary)]">
             Manage course content, publish assignments, and grade submissions.
           </p>
         </div>
@@ -43,11 +43,11 @@ export default function FacultyDashboardPage() {
       </header>
 
       {loading ? (
-        <p className="text-sm text-muted-foreground">Loading…</p>
+        <p className="text-sm text-[var(--text-secondary)]">Loading…</p>
       ) : error ? (
-        <p className="text-sm text-destructive">{error}</p>
+        <p className="text-sm text-[var(--danger-fg)]">{error}</p>
       ) : myCourses.length === 0 ? (
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm text-[var(--text-secondary)]">
           No courses yet. Create one to get started.
         </p>
       ) : (

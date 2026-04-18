@@ -1,4 +1,4 @@
-import { Skeleton } from '@/components/ui/skeleton';
+import { Skeleton } from '@/components/ora';
 
 export default function CollegeLoading() {
   return (
@@ -12,7 +12,7 @@ export default function CollegeLoading() {
       </section>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {[0, 1, 2, 3, 4, 5].map((i) => (
-          <div key={i} className="space-y-3 rounded-lg border bg-card p-5">
+          <div key={i} className="space-y-3 rounded-lg border bg-[var(--surface-raised)] p-5">
             <Skeleton className="h-4 w-16" />
             <Skeleton className="h-5 w-40" />
             <Skeleton className="h-4 w-full" />

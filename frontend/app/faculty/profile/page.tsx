@@ -8,7 +8,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from '@/components/ui/card';
+} from '@/components/ora';
 import { auth, type User } from '@/lib/api';
 
 export default function FacultyProfilePage() {
@@ -24,7 +24,7 @@ export default function FacultyProfilePage() {
           <CardTitle>{user?.name ?? '—'}</CardTitle>
           <CardDescription>{user?.email}</CardDescription>
         </CardHeader>
-        <CardContent className="text-sm text-muted-foreground">
+        <CardContent className="text-sm text-[var(--text-secondary)]">
           Role: {user?.role}
         </CardContent>
       </Card>

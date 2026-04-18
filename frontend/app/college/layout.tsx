@@ -6,25 +6,25 @@ export default function CollegeLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-[var(--surface-base)]">
       <header className="border-b">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
           <Link href="/college" className="flex items-baseline gap-2">
             <span className="text-lg font-semibold">Ora</span>
-            <span className="text-xs uppercase tracking-widest text-muted-foreground">
+            <span className="text-xs uppercase tracking-widest text-[var(--text-secondary)]">
               MCET
             </span>
           </Link>
           <nav className="flex gap-4 text-sm">
             <Link
               href="/college"
-              className="text-muted-foreground hover:text-foreground"
+              className="text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
             >
               About
             </Link>
             <Link
               href="/login"
-              className="font-medium text-primary hover:underline"
+              className="font-medium text-[var(--ember)] hover:underline"
             >
               Sign in
             </Link>
@@ -32,7 +32,7 @@ export default function CollegeLayout({
         </div>
       </header>
       <main className="mx-auto max-w-5xl px-6 py-10">{children}</main>
-      <footer className="border-t py-6 text-center text-xs text-muted-foreground">
+      <footer className="border-t py-6 text-center text-xs text-[var(--text-secondary)]">
         © {new Date().getFullYear()} Dr. Mahalingam College of Engineering and
         Technology, Pollachi.
       </footer>

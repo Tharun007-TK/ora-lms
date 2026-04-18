@@ -51,11 +51,11 @@ export default function StudentAssignmentsIndexPage() {
     <div className="space-y-6">
       <h1 className="text-2xl font-semibold">Assignments</h1>
       {loading ? (
-        <p className="text-sm text-muted-foreground">Loading…</p>
+        <p className="text-sm text-[var(--text-secondary)]">Loading…</p>
       ) : error ? (
-        <p className="text-sm text-destructive">{error}</p>
+        <p className="text-sm text-[var(--danger-fg)]">{error}</p>
       ) : items.length === 0 ? (
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm text-[var(--text-secondary)]">
           No assignments yet. Enroll in a course to see work appear here.
         </p>
       ) : (
@@ -64,7 +64,7 @@ export default function StudentAssignmentsIndexPage() {
             <div key={a.id} className="space-y-1">
               <Link
                 href={`/student/courses/${a.course.id}`}
-                className="text-xs uppercase tracking-widest text-muted-foreground hover:underline"
+                className="text-xs uppercase tracking-widest text-[var(--text-secondary)] hover:underline"
               >
                 {a.course.code}
               </Link>

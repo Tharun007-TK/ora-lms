@@ -7,7 +7,7 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from '@/components/ui/card';
+} from '@/components/ora';
 import { cn } from '@/lib/utils';
 import type { Assignment } from '@/lib/api';
 
@@ -38,7 +38,10 @@ export function AssignmentCard({
 }) {
   const tone = dueDateTone(assignment.due_date);
   const Heading = href ? (
-    <Link href={href} className="hover:underline">
+    <Link
+      href={href}
+      className="hover:text-[var(--ember)] transition-colors focus-ora rounded"
+    >
       {assignment.title}
     </Link>
   ) : (
@@ -48,27 +51,26 @@ export function AssignmentCard({
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-lg">{Heading}</CardTitle>
+        <CardTitle>{Heading}</CardTitle>
         <CardDescription>
           {new Date(assignment.due_date).toLocaleString()} · {assignment.max_marks} marks
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-2 text-sm">
+      <CardContent className="space-y-2">
         {assignment.description && (
-          <p className="text-muted-foreground">{assignment.description}</p>
+          <p className="t-body text-[var(--text-secondary)]">{assignment.description}</p>
         )}
         <p
           className={cn(
-            'text-xs font-medium',
-            tone === 'overdue' && 'text-destructive',
-            tone === 'soon' && 'text-destructive',
-            tone === 'ok' && 'text-muted-foreground',
+            't-caption font-medium',
+            (tone === 'overdue' || tone === 'soon') && 'text-[var(--danger-fg)]',
+            tone === 'ok' && 'text-[var(--text-muted)]',
           )}
         >
           {formatCountdown(assignment.due_date)}
         </p>
         {assignment.submitted && (
-          <p className="text-xs text-primary">
+          <p className="t-caption text-[var(--ember)]">
             Submitted
             {assignment.marks != null
               ? ` · Graded ${assignment.marks}/${assignment.max_marks}`

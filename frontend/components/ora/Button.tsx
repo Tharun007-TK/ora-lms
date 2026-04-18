@@ -1,6 +1,6 @@
 'use client';
 
-import { forwardRef, type ButtonHTMLAttributes } from 'react';
+import { Children, cloneElement, forwardRef, isValidElement, type ButtonHTMLAttributes, type ReactElement } from 'react';
 
 type Variant = 'primary' | 'secondary' | 'ghost' | 'danger';
 type Size = 'sm' | 'md' | 'lg';
@@ -9,6 +9,7 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: Variant;
   size?: Size;
   loading?: boolean;
+  asChild?: boolean;
 }
 
 const SIZE: Record<Size, string> = {
@@ -29,7 +30,7 @@ const VARIANT: Record<Variant, string> = {
 };
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
-  { variant = 'primary', size = 'md', loading, disabled, className = '', children, ...rest },
+  { variant = 'primary', size = 'md', loading, disabled, asChild, className = '', children, ...rest },
   ref,
 ) {
   const classes = [
@@ -40,6 +41,13 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
     VARIANT[variant],
     className,
   ].join(' ');
+
+  if (asChild && isValidElement(children)) {
+    const child = Children.only(children) as ReactElement<{ className?: string }>;
+    return cloneElement(child, {
+      className: `${classes} ${child.props.className ?? ''}`.trim(),
+    });
+  }
 
   return (
     <button

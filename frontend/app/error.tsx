@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ora';
 
 export default function Error({
   error,
@@ -17,7 +17,7 @@ export default function Error({
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-4 text-center">
       <h1 className="text-2xl font-semibold">Something went wrong</h1>
-      <p className="max-w-md text-sm text-muted-foreground">{error.message}</p>
+      <p className="max-w-md text-sm text-[var(--text-secondary)]">{error.message}</p>
       <Button onClick={reset}>Try again</Button>
     </div>
   );

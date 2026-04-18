@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 import { AssignmentCard } from '@/components/assignment-card';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ora';
 import { assignments, type Assignment } from '@/lib/api';
 
 export default function FacultyAssignmentsPage() {
@@ -38,7 +38,7 @@ export default function FacultyAssignmentsPage() {
         <div>
           <Link
             href={`/faculty/courses/${courseId}`}
-            className="text-xs text-muted-foreground hover:underline"
+            className="text-xs text-[var(--text-secondary)] hover:underline"
           >
             ← Back to course
           </Link>
@@ -52,11 +52,11 @@ export default function FacultyAssignmentsPage() {
       </header>
 
       {loading ? (
-        <p className="text-sm text-muted-foreground">Loading…</p>
+        <p className="text-sm text-[var(--text-secondary)]">Loading…</p>
       ) : error ? (
-        <p className="text-sm text-destructive">{error}</p>
+        <p className="text-sm text-[var(--danger-fg)]">{error}</p>
       ) : items.length === 0 ? (
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm text-[var(--text-secondary)]">
           No assignments created yet.
         </p>
       ) : (
@@ -66,7 +66,7 @@ export default function FacultyAssignmentsPage() {
               key={a.id}
               assignment={a}
               footer={
-                <Button asChild size="sm" variant="outline">
+                <Button asChild size="sm" variant="secondary">
                   <Link
                     href={`/faculty/courses/${courseId}/assignments/${a.id}/submissions`}
                   >

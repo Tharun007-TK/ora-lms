@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 import { NoteCard } from '@/components/note-card';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ora';
 import {
   Card,
   CardContent,
@@ -13,9 +13,9 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+} from '@/components/ora';
+import { Input } from '@/components/ora';
+import { Label } from '@/components/ora';
 import { notes, type Note } from '@/lib/api';
 
 export default function FacultyNotesPage() {
@@ -81,7 +81,7 @@ export default function FacultyNotesPage() {
         <div className="space-y-2">
           <Link
             href={`/faculty/courses/${courseId}`}
-            className="text-xs text-muted-foreground hover:underline"
+            className="text-xs text-[var(--text-secondary)] hover:underline"
           >
             ← Back to course
           </Link>
@@ -117,7 +117,7 @@ export default function FacultyNotesPage() {
               rows={6}
               value={content}
               onChange={(e) => setContent(e.target.value)}
-              className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="flex w-full rounded-md border border-[var(--surface-border)] bg-[var(--surface-base)] px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ember)]"
               placeholder="Markdown-friendly text"
             />
           </div>
@@ -130,10 +130,10 @@ export default function FacultyNotesPage() {
               onChange={(e) => setFile(e.target.files?.[0] ?? null)}
             />
             {file && (
-              <p className="text-xs text-muted-foreground">Selected: {file.name}</p>
+              <p className="text-xs text-[var(--text-secondary)]">Selected: {file.name}</p>
             )}
           </div>
-          {error && <p className="text-sm text-destructive">{error}</p>}
+          {error && <p className="text-sm text-[var(--danger-fg)]">{error}</p>}
         </CardContent>
         <CardFooter className="flex justify-end">
           <Button
@@ -148,9 +148,9 @@ export default function FacultyNotesPage() {
       <section className="space-y-3">
         <h2 className="text-lg font-semibold">Existing notes</h2>
         {loading ? (
-          <p className="text-sm text-muted-foreground">Loading…</p>
+          <p className="text-sm text-[var(--text-secondary)]">Loading…</p>
         ) : items.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-[var(--text-secondary)]">
             Nothing published yet.
           </p>
         ) : (

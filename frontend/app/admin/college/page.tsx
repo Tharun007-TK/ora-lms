@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from 'react';
 
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ora';
+import { Input } from '@/components/ora';
+import { Label } from '@/components/ora';
 import { college, type CollegeInfo } from '@/lib/api';
 
 export default function AdminCollegePage() {
@@ -55,13 +55,13 @@ export default function AdminCollegePage() {
     }
   };
 
-  if (loading) return <p className="text-sm text-muted-foreground">Loading…</p>;
+  if (loading) return <p className="text-sm text-[var(--text-secondary)]">Loading…</p>;
 
   return (
     <div className="max-w-3xl space-y-6">
       <header>
         <h1 className="text-2xl font-semibold">College info</h1>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm text-[var(--text-secondary)]">
           Shown on the public <code className="text-xs">/college</code> page.
         </p>
       </header>
@@ -84,7 +84,7 @@ export default function AdminCollegePage() {
             value={about}
             onChange={(e) => setAbout(e.target.value)}
             rows={5}
-            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+            className="w-full rounded-md border border-[var(--surface-border)] bg-[var(--surface-base)] px-3 py-2 text-sm"
           />
         </div>
         <div className="space-y-1.5">
@@ -94,7 +94,7 @@ export default function AdminCollegePage() {
             value={vision}
             onChange={(e) => setVision(e.target.value)}
             rows={3}
-            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+            className="w-full rounded-md border border-[var(--surface-border)] bg-[var(--surface-base)] px-3 py-2 text-sm"
           />
         </div>
         <div className="space-y-1.5">
@@ -104,13 +104,13 @@ export default function AdminCollegePage() {
             value={mission}
             onChange={(e) => setMission(e.target.value)}
             rows={3}
-            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+            className="w-full rounded-md border border-[var(--surface-border)] bg-[var(--surface-base)] px-3 py-2 text-sm"
           />
         </div>
 
-        {error && <p className="text-sm text-destructive">{error}</p>}
+        {error && <p className="text-sm text-[var(--danger-fg)]">{error}</p>}
         {info && (
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs text-[var(--text-secondary)]">
             Last updated {new Date(info.updated_at).toLocaleString()}
           </p>
         )}

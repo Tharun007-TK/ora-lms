@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ora';
 import { CourseCard } from '@/components/course-card';
 import { courses, type Course } from '@/lib/api';
 
@@ -43,18 +43,18 @@ export default function StudentCoursesPage() {
       <header className="flex items-baseline justify-between">
         <div>
           <h1 className="text-2xl font-semibold">Courses</h1>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-[var(--text-secondary)]">
             Browse the catalog and enroll in courses you want to follow.
           </p>
         </div>
       </header>
 
       {loading ? (
-        <p className="text-sm text-muted-foreground">Loading…</p>
+        <p className="text-sm text-[var(--text-secondary)]">Loading…</p>
       ) : error ? (
-        <p className="text-sm text-destructive">{error}</p>
+        <p className="text-sm text-[var(--danger-fg)]">{error}</p>
       ) : items.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No courses published yet.</p>
+        <p className="text-sm text-[var(--text-secondary)]">No courses published yet.</p>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {items.map((c) => (
@@ -65,7 +65,7 @@ export default function StudentCoursesPage() {
               footer={
                 <Button
                   size="sm"
-                  variant={c.enrolled ? 'secondary' : 'default'}
+                  variant={c.enrolled ? 'secondary' : 'primary'}
                   onClick={() => toggleEnrollment(c)}
                 >
                   {c.enrolled ? 'Unenroll' : 'Enroll'}

@@ -9,7 +9,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from '@/components/ui/card';
+} from '@/components/ora';
 import { courses, type Course } from '@/lib/api';
 
 export default function AdminDashboardPage() {
@@ -28,7 +28,7 @@ export default function AdminDashboardPage() {
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-semibold">Admin dashboard</h1>
-      {error && <p className="text-sm text-destructive">{error}</p>}
+      {error && <p className="text-sm text-[var(--danger-fg)]">{error}</p>}
       <div className="grid gap-4 md:grid-cols-3">
         <Card>
           <CardHeader>
@@ -39,7 +39,7 @@ export default function AdminDashboardPage() {
             <p className="text-3xl font-semibold">{all.length}</p>
             <Link
               href="/admin/courses"
-              className="mt-2 inline-block text-sm font-medium text-primary hover:underline"
+              className="mt-2 inline-block text-sm font-medium text-[var(--ember)] hover:underline"
             >
               Manage →
             </Link>
@@ -53,7 +53,7 @@ export default function AdminDashboardPage() {
           <CardContent>
             <Link
               href="/admin/users"
-              className="text-sm font-medium text-primary hover:underline"
+              className="text-sm font-medium text-[var(--ember)] hover:underline"
             >
               Manage →
             </Link>
@@ -67,7 +67,7 @@ export default function AdminDashboardPage() {
           <CardContent>
             <Link
               href="/admin/departments"
-              className="text-sm font-medium text-primary hover:underline"
+              className="text-sm font-medium text-[var(--ember)] hover:underline"
             >
               Manage →
             </Link>

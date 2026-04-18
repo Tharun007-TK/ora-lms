@@ -86,19 +86,19 @@ export default function StudentAssignmentsPage() {
       <header className="space-y-2">
         <Link
           href={`/student/courses/${courseId}`}
-          className="text-xs text-muted-foreground hover:underline"
+          className="text-xs text-[var(--text-secondary)] hover:underline"
         >
           ← Back to course
         </Link>
         <h1 className="text-2xl font-semibold">Assignments</h1>
       </header>
 
-      {error && <p className="text-sm text-destructive">{error}</p>}
+      {error && <p className="text-sm text-[var(--danger-fg)]">{error}</p>}
 
       {loading ? (
-        <p className="text-sm text-muted-foreground">Loading…</p>
+        <p className="text-sm text-[var(--text-secondary)]">Loading…</p>
       ) : items.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No assignments published yet.</p>
+        <p className="text-sm text-[var(--text-secondary)]">No assignments published yet.</p>
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
           {items.map((a) => {
@@ -121,8 +121,8 @@ export default function StudentAssignmentsPage() {
                       <label
                         className={`inline-flex h-9 cursor-pointer items-center justify-center rounded-md px-3 text-sm font-medium ${
                           submission
-                            ? 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
-                            : 'bg-primary text-primary-foreground hover:bg-primary/90'
+                            ? 'bg-[var(--surface-sunken)] text-[var(--text-secondary)] hover:bg-[var(--surface-sunken)]/80'
+                            : 'bg-[var(--ember)] text-[var(--ember-ink)] hover:bg-[var(--ember)]/90'
                         } ${uploading ? 'pointer-events-none opacity-50' : ''}`}
                       >
                         {submission ? 'Resubmit' : 'Submit'}
@@ -142,22 +142,22 @@ export default function StudentAssignmentsPage() {
                           href={file}
                           target="_blank"
                           rel="noreferrer"
-                          className="text-xs text-primary hover:underline"
+                          className="text-xs text-[var(--ember)] hover:underline"
                         >
                           Open submission ↗
                         </a>
                       )}
                     </div>
                     {uploading && (
-                      <div className="h-1 w-full overflow-hidden rounded bg-secondary">
+                      <div className="h-1 w-full overflow-hidden rounded bg-[var(--surface-sunken)]">
                         <div
-                          className="h-full bg-primary transition-all"
+                          className="h-full bg-[var(--ember)] transition-all"
                           style={{ width: `${pct}%` }}
                         />
                       </div>
                     )}
                     {submission?.feedback && (
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-xs text-[var(--text-secondary)]">
                         Feedback: {submission.feedback}
                       </p>
                     )}

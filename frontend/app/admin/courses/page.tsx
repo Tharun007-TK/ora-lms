@@ -8,8 +8,8 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+} from '@/components/ora';
+import { Button } from '@/components/ora';
 import { courses, users, type Course, type UserBrief } from '@/lib/api';
 
 export default function AdminCoursesPage() {
@@ -75,11 +75,11 @@ export default function AdminCoursesPage() {
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-semibold">Courses</h1>
-      {error && <p className="text-sm text-destructive">{error}</p>}
+      {error && <p className="text-sm text-[var(--danger-fg)]">{error}</p>}
       {loading ? (
-        <p className="text-sm text-muted-foreground">Loading…</p>
+        <p className="text-sm text-[var(--text-secondary)]">Loading…</p>
       ) : items.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No courses yet.</p>
+        <p className="text-sm text-[var(--text-secondary)]">No courses yet.</p>
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
           {items.map((c) => {
@@ -94,7 +94,7 @@ export default function AdminCoursesPage() {
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <label className="flex flex-col gap-1 text-sm">
-                    <span className="text-muted-foreground">
+                    <span className="text-[var(--text-secondary)]">
                       Assigned faculty
                     </span>
                     <select
@@ -105,7 +105,7 @@ export default function AdminCoursesPage() {
                           [c.id]: e.target.value === '' ? '' : Number(e.target.value),
                         }))
                       }
-                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                      className="flex h-10 w-full rounded-md border border-[var(--surface-border)] bg-[var(--surface-base)] px-3 py-2 text-sm"
                     >
                       <option value="">Unassigned</option>
                       {faculty.map((f) => (
@@ -125,7 +125,7 @@ export default function AdminCoursesPage() {
                     </Button>
                     <Button
                       size="sm"
-                      variant="destructive"
+                      variant="danger"
                       onClick={() => remove(c)}
                       disabled={saving === c.id}
                     >
