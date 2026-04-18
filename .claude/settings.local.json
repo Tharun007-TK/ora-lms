@@ -1,11 +1,35 @@
 {
   "permissions": {
-    "allow": [
-      "Bash(python -c \"import ast,sys; [ast.parse\\(open\\(p,encoding='utf-8'\\).read\\(\\)\\) for p in ['routers/library.py','routers/college.py','schemas/requests.py','main.py']]; print\\('OK'\\)\")",
-      "Bash(python -c \"import ast; [ast.parse\\(open\\(p,encoding='utf-8'\\).read\\(\\)\\) for p in ['services/ai_service.py','routers/ai.py','core/config.py','main.py']]; print\\('OK'\\)\")",
-      "Bash(python -c \"import ast; [ast.parse\\(open\\(p,encoding='utf-8'\\).read\\(\\)\\) for p in ['services/ai_service.py','routers/ai.py','routers/notes.py','core/config.py','main.py']]; print\\('OK'\\)\")",
-      "Bash(python -c \"import ast; [ast.parse\\(open\\(p,encoding='utf-8'\\).read\\(\\)\\) for p in ['services/judge_service.py','services/notification_service.py','services/ai_service.py','routers/judge.py','routers/notifications.py','routers/assignments.py','routers/notes.py','routers/ai.py','schemas/requests.py','main.py']]; print\\('OK'\\)\")",
-      "Bash(python -c \"import ast; [ast.parse\\(open\\(p,encoding='utf-8'\\).read\\(\\)\\) for p in ['routers/judge.py','routers/assignments.py','routers/notifications.py','routers/notes.py','services/ai_service.py','services/judge_service.py','services/notification_service.py','main.py']]; print\\('OK'\\)\")"
+    "allow": [],
+    "deny": [
+      "Bash(python -c:*)",
+      "Bash(python3 -c:*)",
+      "Bash(node -e:*)",
+      "Bash(eval:*)",
+      "Bash(curl * | sh)",
+      "Bash(curl * | bash)",
+      "Bash(wget * | sh)",
+      "Bash(rm -rf /:*)",
+      "Bash(rm -rf ~:*)",
+      "Bash(git push --force:*)",
+      "Bash(git push -f:*)",
+      "Bash(sudo:*)",
+      "Bash(chmod 777:*)",
+      "Bash(ssh:*)",
+      "Bash(* > /dev/*)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .claude/hooks/pre-bash-guard.js"
+          }
+        ]
+      }
     ]
   }
 }

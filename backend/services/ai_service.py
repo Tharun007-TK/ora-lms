@@ -1,4 +1,4 @@
-"""AI generation services — Groq notes maker + RAG retrieval + Claude stream."""
+"""AI generation services — Claude notes maker + RAG retrieval + Claude stream."""
 from __future__ import annotations
 
 import asyncio
@@ -88,7 +88,7 @@ def chunk_text(text: str, *, max_chars: int = 8000) -> list[str]:
     return chunks
 
 
-# ---------- Groq call ----------
+# ---------- Claude call (AI Notes Maker) ----------
 
 
 _SYSTEM_PROMPT = (
@@ -114,48 +114,53 @@ class GeneratedNotes:
     char_count: int
 
 
-async def _groq_client():
+def _anthropic_client():
     try:
-        from groq import AsyncGroq  # type: ignore
+        from anthropic import AsyncAnthropic  # type: ignore
     except ImportError as exc:  # pragma: no cover
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Groq SDK not installed on the server",
+            detail="anthropic SDK not installed on the server",
         ) from exc
-    if not settings.GROQ_API_KEY:
+    if not settings.ANTHROPIC_API_KEY:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="GROQ_API_KEY is not configured",
+            detail="ANTHROPIC_API_KEY is not configured",
         )
-    return AsyncGroq(api_key=settings.GROQ_API_KEY)
+    return AsyncAnthropic(api_key=settings.ANTHROPIC_API_KEY)
+
+
+def _extract_text(message) -> str:
+    parts: list[str] = []
+    for block in getattr(message, "content", []) or []:
+        text = getattr(block, "text", None)
+        if isinstance(text, str):
+            parts.append(text)
+    return "".join(parts).strip()
 
 
 async def _structure_chunk(client, chunk: str, *, index: int, total: int) -> str:
     prefix = f"(Chunk {index + 1} of {total})\n\n" if total > 1 else ""
     try:
-        response = await client.chat.completions.create(
-            model=settings.GROQ_MODEL,
+        message = await client.messages.create(
+            model=settings.ANTHROPIC_MODEL,
             temperature=0.2,
             max_tokens=2048,
-            messages=[
-                {"role": "system", "content": _SYSTEM_PROMPT},
-                {"role": "user", "content": f"{prefix}{chunk}"},
-            ],
+            system=_SYSTEM_PROMPT,
+            messages=[{"role": "user", "content": f"{prefix}{chunk}"}],
         )
     except Exception as exc:
-        log.exception("Groq call failed")
+        log.exception("Anthropic notes call failed")
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=f"Groq request failed: {exc}",
+            detail=f"Claude request failed: {exc}",
         ) from exc
 
-    choice = response.choices[0] if response.choices else None
-    content = (choice.message.content if choice and choice.message else "") or ""
-    return content.strip()
+    return _extract_text(message)
 
 
 async def generate_notes_from_pdf(file_bytes: bytes, *, max_chunks: int = 6) -> GeneratedNotes:
-    """Extract PDF text, run Groq over each chunk, and return joined Markdown."""
+    """Extract PDF text, run Claude over each chunk, and return joined Markdown."""
     text = extract_pdf_text(file_bytes)
     chunks = chunk_text(text)
     if len(chunks) > max_chunks:
@@ -166,7 +171,7 @@ async def generate_notes_from_pdf(file_bytes: bytes, *, max_chunks: int = 6) -> 
         )
         chunks = chunks[:max_chunks]
 
-    client = await _groq_client()
+    client = _anthropic_client()
     total = len(chunks)
     sections = await asyncio.gather(
         *(_structure_chunk(client, c, index=i, total=total) for i, c in enumerate(chunks))
@@ -175,7 +180,7 @@ async def generate_notes_from_pdf(file_bytes: bytes, *, max_chunks: int = 6) -> 
     if not body.strip():
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
-            detail="Groq returned an empty response",
+            detail="Claude returned an empty response",
         )
     return GeneratedNotes(content=body, chunk_count=total, char_count=len(body))
 

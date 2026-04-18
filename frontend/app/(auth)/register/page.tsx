@@ -4,17 +4,18 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
-import { Button } from '@/components/ui/button';
 import {
+  Button,
   Card,
   CardContent,
   CardDescription,
   CardFooter,
   CardHeader,
   CardTitle,
-} from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+  Input,
+  Label,
+  Select,
+} from '@/components/ora';
 import { auth, type UserRole } from '@/lib/api';
 import { dashboardPathForRole } from '@/lib/auth';
 
@@ -97,36 +98,41 @@ export default function RegisterPage() {
         </div>
         <div className="space-y-2">
           <Label htmlFor="role">Role</Label>
-          <select
+          <Select
             id="role"
             value={role}
             onChange={(e) => setRole(e.target.value as UserRole)}
-            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
             {ROLE_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>
                 {opt.label}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
         {error && (
-          <p className="text-sm text-destructive" role="alert">
+          <p className="t-caption text-[var(--danger-fg)]" role="alert">
             {error}
           </p>
         )}
       </CardContent>
       <CardFooter className="flex flex-col gap-3">
         <Button
+          variant="primary"
+          size="lg"
           className="w-full"
           onClick={handleRegister}
           disabled={loading || !email || !password || !name}
+          loading={loading}
         >
           {loading ? 'Creating account…' : 'Create account'}
         </Button>
-        <p className="text-sm text-muted-foreground">
+        <p className="t-body text-[var(--text-secondary)]">
           Already have an account?{' '}
-          <Link href="/login" className="font-medium text-primary hover:underline">
+          <Link
+            href="/login"
+            className="font-medium text-[var(--ember)] hover:underline"
+          >
             Sign in
           </Link>
         </p>

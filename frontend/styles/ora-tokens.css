@@ -1,0 +1,92 @@
+:root {
+  /* core */
+  --ink: #0A0A0A;
+  --paper: #FAFAF5;
+  --ember: #D85A30;
+  --ember-ink: #FFFFFF;
+
+  /* gray ramp — interpolated OKLCH ink→paper */
+  --gray-50:  #F3F2EC;
+  --gray-100: #E6E4DC;
+  --gray-200: #D3D1C7;
+  --gray-300: #B8B6AC;
+  --gray-400: #9C9A92;
+  --gray-500: #7A7873;
+  --gray-600: #58574F;
+  --gray-700: #3D3D3A;
+  --gray-800: #232321;
+  --gray-900: #0A0A0A;
+
+  /* surfaces */
+  --surface:        var(--paper);
+  --surface-base:   var(--paper);
+  --surface-raised: #FFFFFF;
+  --surface-sunken: #F3F2EC;
+  --surface-border: #D3D1C7;
+  --border:         #D3D1C7;
+  --border-strong:  #B8B6AC;
+
+  /* text */
+  --text-primary:   var(--ink);
+  --text-secondary: #3D3D3A;
+  --text-muted:     #9C9A92;
+  --text-inverse:   var(--paper);
+
+  /* functional pairs */
+  --info-fg: #185FA5;    --info-bg: #E6F1FB;    --info-text: #0C447C;
+  --success-fg: #3B6D11; --success-bg: #EAF3DE; --success-text: #27500A;
+  --warning-fg: #BA7517; --warning-bg: #FAEEDA; --warning-text: #633806;
+  --danger-fg: #A32D2D;  --danger-bg: #FCEBEB;  --danger-text: #501313;
+
+  /* motion */
+  --dur-fast: 120ms;
+  --dur-base: 200ms;
+  --dur-slow: 320ms;
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+
+  /* focus + elevation */
+  --focus-ring: 0 0 0 3px rgba(216, 90, 48, 0.25);
+  --elev-modal: 0 8px 24px rgba(10, 10, 10, 0.08);
+
+  /* radii */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+  --radius-full: 9999px;
+}
+
+.dark {
+  --paper: #0F0F0E;
+  --surface:        #0F0F0E;
+  --surface-base:   #0F0F0E;
+  --surface-raised: #1A1A18;
+  --surface-sunken: #080807;
+
+  --gray-50:  #0F0F0E;
+  --gray-100: #181816;
+  --gray-200: #232321;
+  --gray-300: #34332F;
+  --gray-400: #58574F;
+  --gray-500: #7A7873;
+  --gray-600: #9C9A92;
+  --gray-700: #B8B6AC;
+  --gray-800: #D3D1C7;
+  --gray-900: #FAFAF5;
+
+  --text-primary:   #FAFAF5;
+  --text-secondary: #D3D1C7;
+  --text-muted:     #7A7873;
+  --text-inverse:   #0F0F0E;
+  --surface-border: #34332F;
+  --border:         #34332F;
+  --border-strong:  #58574F;
+
+  --info-fg: #6FA8DC;    --info-bg: #0D2336;    --info-text: #BFDAF1;
+  --success-fg: #8DB86A; --success-bg: #162512; --success-text: #C9DDB4;
+  --warning-fg: #D9A861; --warning-bg: #2B1F0E; --warning-text: #EBD3A4;
+  --danger-fg: #D98080;  --danger-bg: #2B1313;  --danger-text: #EDC0C0;
+
+  --focus-ring: 0 0 0 3px rgba(216, 90, 48, 0.35);
+  --elev-modal: 0 8px 24px rgba(0, 0, 0, 0.5);
+}

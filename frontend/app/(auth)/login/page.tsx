@@ -4,17 +4,17 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
-import { Button } from '@/components/ui/button';
 import {
+  Button,
   Card,
   CardContent,
   CardDescription,
   CardFooter,
   CardHeader,
   CardTitle,
-} from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+  Input,
+  Label,
+} from '@/components/ora';
 import { auth } from '@/lib/api';
 import { dashboardPathForRole } from '@/lib/auth';
 
@@ -75,22 +75,28 @@ export default function LoginPage() {
           />
         </div>
         {error && (
-          <p className="text-sm text-destructive" role="alert">
+          <p className="t-caption text-[var(--danger-fg)]" role="alert">
             {error}
           </p>
         )}
       </CardContent>
       <CardFooter className="flex flex-col gap-3">
         <Button
+          variant="primary"
+          size="lg"
           className="w-full"
           onClick={handleLogin}
           disabled={loading || !email || !password}
+          loading={loading}
         >
           {loading ? 'Signing in…' : 'Sign in'}
         </Button>
-        <p className="text-sm text-muted-foreground">
+        <p className="t-body text-[var(--text-secondary)]">
           No account?{' '}
-          <Link href="/register" className="font-medium text-primary hover:underline">
+          <Link
+            href="/register"
+            className="font-medium text-[var(--ember)] hover:underline"
+          >
             Register
           </Link>
         </p>

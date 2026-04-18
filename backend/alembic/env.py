@@ -15,7 +15,7 @@ import models  # noqa: F401  # ensure all models registered
 config = context.config
 
 # Inject DATABASE_URL from settings (support async URL)
-config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
+config.set_main_option("sqlalchemy.url", settings.DATABASE_URL.replace("%", "%%"))
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
