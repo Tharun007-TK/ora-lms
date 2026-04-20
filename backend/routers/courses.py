@@ -1,6 +1,9 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, status
+import io
+
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi.responses import StreamingResponse
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -8,7 +11,18 @@ from sqlalchemy.orm import selectinload
 
 from core.auth import get_current_user, require_admin, require_faculty_or_admin
 from core.database import get_db
-from models.tables import Course, Enrollment, User, UserRole
+from models.tables import (
+    Assignment,
+    AssignmentType,
+    CodingAssessment,
+    CodingSubmission,
+    Course,
+    Enrollment,
+    QuizAttempt,
+    Submission,
+    User,
+    UserRole,
+)
 from schemas.requests import (
     CourseCreate,
     CourseOut,
@@ -284,3 +298,277 @@ async def list_course_students(
         .order_by(User.name)
     )
     return [UserBrief.model_validate(u) for u in result.scalars().all()]
+
+
+# ---------- Performance export (faculty/admin) ----------
+
+
+@router.get("/{course_id}/performance.xlsx")
+async def export_performance(
+    course_id: int,
+    student_ids: str | None = Query(
+        default=None,
+        description="Comma-separated student ids to export (default: all enrolled)",
+    ),
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_faculty_or_admin),
+) -> StreamingResponse:
+    """Excel export of student performance for a course.
+
+    Sheets:
+    - Summary — one row per student with totals across all assessment types
+    - Assignments — per (student, assignment) with marks
+    - Quizzes — per (student, quiz) with score
+    - Coding — per (student, coding assessment) with best score
+    """
+    # Lazy import keeps cold-start light if export is unused.
+    from openpyxl import Workbook
+
+    course = await _get_course_or_404(db, course_id)
+    if user.role == UserRole.faculty and course.faculty_id != user.id:
+        raise HTTPException(status_code=403, detail="Not your course")
+
+    # Roster
+    roster_res = await db.execute(
+        select(User)
+        .join(Enrollment, Enrollment.student_id == User.id)
+        .where(Enrollment.course_id == course_id, User.role == UserRole.student)
+        .order_by(User.name)
+    )
+    roster: list[User] = list(roster_res.scalars().all())
+
+    if student_ids:
+        try:
+            ids = {int(s) for s in student_ids.split(",") if s.strip()}
+        except ValueError:
+            raise HTTPException(
+                status_code=400,
+                detail="student_ids must be comma-separated integers",
+            )
+        roster = [s for s in roster if s.id in ids]
+
+    if not roster:
+        raise HTTPException(
+            status_code=404, detail="No students match this filter"
+        )
+
+    student_id_set = {s.id for s in roster}
+
+    # Course assignments (file + quiz)
+    asg_res = await db.execute(
+        select(Assignment)
+        .where(Assignment.course_id == course_id)
+        .order_by(Assignment.due_date.asc())
+    )
+    asgs: list[Assignment] = list(asg_res.scalars().all())
+    file_asgs = [a for a in asgs if a.type == AssignmentType.file]
+    quiz_asgs = [a for a in asgs if a.type == AssignmentType.quiz]
+
+    # Submissions (file)
+    sub_res = await db.execute(
+        select(Submission).where(
+            Submission.assignment_id.in_([a.id for a in file_asgs] or [0]),
+            Submission.student_id.in_(student_id_set),
+        )
+    )
+    sub_by_pair: dict[tuple[int, int], Submission] = {
+        (s.assignment_id, s.student_id): s for s in sub_res.scalars().all()
+    }
+
+    # Quiz attempts
+    qa_res = await db.execute(
+        select(QuizAttempt).where(
+            QuizAttempt.assignment_id.in_([a.id for a in quiz_asgs] or [0]),
+            QuizAttempt.student_id.in_(student_id_set),
+        )
+    )
+    qa_by_pair: dict[tuple[int, int], QuizAttempt] = {
+        (a.assignment_id, a.student_id): a for a in qa_res.scalars().all()
+    }
+
+    # Coding assessments (graded for this course)
+    coding_res = await db.execute(
+        select(CodingAssessment)
+        .where(
+            CodingAssessment.course_id == course_id,
+            CodingAssessment.is_practice.is_(False),
+        )
+        .order_by(CodingAssessment.created_at.asc())
+    )
+    coding_asgs: list[CodingAssessment] = list(coding_res.scalars().all())
+
+    # Best coding score per (student, assessment)
+    csub_res = await db.execute(
+        select(
+            CodingSubmission.assessment_id,
+            CodingSubmission.student_id,
+            func.max(CodingSubmission.score),
+        )
+        .where(
+            CodingSubmission.assessment_id.in_(
+                [c.id for c in coding_asgs] or [0]
+            ),
+            CodingSubmission.student_id.in_(student_id_set),
+        )
+        .group_by(CodingSubmission.assessment_id, CodingSubmission.student_id)
+    )
+    csub_by_pair: dict[tuple[int, int], int] = {
+        (aid, sid): int(best or 0) for aid, sid, best in csub_res.all()
+    }
+
+    # Build workbook
+    wb = Workbook()
+    summary = wb.active
+    summary.title = "Summary"
+    summary.append([
+        "Student ID",
+        "Name",
+        "Email",
+        "File submitted / total",
+        "File graded avg %",
+        "Quiz submitted / total",
+        "Quiz avg %",
+        "Coding attempted / total",
+        "Coding avg %",
+    ])
+
+    for s in roster:
+        f_total = len(file_asgs)
+        f_sub = sum(
+            1 for a in file_asgs if (a.id, s.id) in sub_by_pair
+        )
+        f_graded_pcts: list[float] = []
+        for a in file_asgs:
+            sub = sub_by_pair.get((a.id, s.id))
+            if sub and sub.marks is not None and a.max_marks > 0:
+                f_graded_pcts.append(100 * sub.marks / a.max_marks)
+        f_avg = (
+            round(sum(f_graded_pcts) / len(f_graded_pcts), 1)
+            if f_graded_pcts
+            else None
+        )
+
+        q_total = len(quiz_asgs)
+        q_sub = sum(
+            1
+            for a in quiz_asgs
+            if (a.id, s.id) in qa_by_pair
+            and qa_by_pair[(a.id, s.id)].submitted_at is not None
+        )
+        q_pcts: list[float] = []
+        for a in quiz_asgs:
+            at = qa_by_pair.get((a.id, s.id))
+            if at and at.score is not None and at.max_score:
+                q_pcts.append(100 * at.score / at.max_score)
+        q_avg = round(sum(q_pcts) / len(q_pcts), 1) if q_pcts else None
+
+        c_total = len(coding_asgs)
+        c_attempted = sum(
+            1 for c in coding_asgs if (c.id, s.id) in csub_by_pair
+        )
+        c_pcts: list[float] = []
+        for c in coding_asgs:
+            best = csub_by_pair.get((c.id, s.id))
+            if best is not None and c.max_score > 0:
+                c_pcts.append(100 * best / c.max_score)
+        c_avg = round(sum(c_pcts) / len(c_pcts), 1) if c_pcts else None
+
+        summary.append([
+            s.id,
+            s.name,
+            s.email,
+            f"{f_sub}/{f_total}",
+            f_avg if f_avg is not None else "",
+            f"{q_sub}/{q_total}",
+            q_avg if q_avg is not None else "",
+            f"{c_attempted}/{c_total}",
+            c_avg if c_avg is not None else "",
+        ])
+
+    # Assignments sheet
+    asg_sheet = wb.create_sheet("Assignments")
+    asg_sheet.append([
+        "Student ID",
+        "Student",
+        "Assignment",
+        "Due",
+        "Max",
+        "Marks",
+        "Submitted at",
+        "Graded at",
+        "Feedback",
+    ])
+    for s in roster:
+        for a in file_asgs:
+            sub = sub_by_pair.get((a.id, s.id))
+            asg_sheet.append([
+                s.id,
+                s.name,
+                a.title,
+                a.due_date.isoformat() if a.due_date else "",
+                a.max_marks,
+                sub.marks if sub and sub.marks is not None else "",
+                sub.submitted_at.isoformat() if sub and sub.submitted_at else "",
+                sub.graded_at.isoformat() if sub and sub.graded_at else "",
+                (sub.feedback or "") if sub else "",
+            ])
+
+    # Quizzes sheet
+    quiz_sheet = wb.create_sheet("Quizzes")
+    quiz_sheet.append([
+        "Student ID",
+        "Student",
+        "Quiz",
+        "Due",
+        "Score",
+        "Max score",
+        "Started at",
+        "Submitted at",
+    ])
+    for s in roster:
+        for a in quiz_asgs:
+            at = qa_by_pair.get((a.id, s.id))
+            quiz_sheet.append([
+                s.id,
+                s.name,
+                a.title,
+                a.due_date.isoformat() if a.due_date else "",
+                at.score if at and at.score is not None else "",
+                at.max_score if at and at.max_score is not None else "",
+                at.started_at.isoformat() if at and at.started_at else "",
+                at.submitted_at.isoformat() if at and at.submitted_at else "",
+            ])
+
+    # Coding sheet
+    coding_sheet = wb.create_sheet("Coding")
+    coding_sheet.append([
+        "Student ID",
+        "Student",
+        "Assessment",
+        "Due",
+        "Max",
+        "Best score",
+    ])
+    for s in roster:
+        for c in coding_asgs:
+            best = csub_by_pair.get((c.id, s.id))
+            coding_sheet.append([
+                s.id,
+                s.name,
+                c.title,
+                c.due_date.isoformat() if c.due_date else "",
+                c.max_score,
+                best if best is not None else "",
+            ])
+
+    buf = io.BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+    filename = f"performance_course_{course_id}.xlsx"
+    return StreamingResponse(
+        buf,
+        media_type=(
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        ),
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )

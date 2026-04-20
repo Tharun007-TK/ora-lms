@@ -736,6 +736,21 @@ class JudgeRunResult(BaseModel):
     test_cases: list[JudgeTestCaseResult] = []
 
 
+class StudentImportRow(BaseModel):
+    line: int
+    email: str
+    status: str  # 'created' | 'exists' | 'error'
+    detail: str | None = None
+    generated_password: str | None = None
+
+
+class StudentImportResult(BaseModel):
+    total: int
+    created: int
+    skipped: int
+    rows: list[StudentImportRow]
+
+
 class JudgeSubmitResult(BaseModel):
     """Full submit result — persisted + per-testcase for UI."""
     submission_id: int

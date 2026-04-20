@@ -2,7 +2,10 @@
 
 import { useEffect, useState } from 'react';
 
+import Link from 'next/link';
+
 import {
+  Button,
   Card,
   CardContent,
   CardDescription,
@@ -28,7 +31,12 @@ export default function AdminUsersPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-semibold">Users</h1>
+      <header className="flex flex-wrap items-center justify-between gap-2">
+        <h1 className="text-2xl font-semibold">Users</h1>
+        <Button asChild size="sm">
+          <Link href="/admin/users/import">+ Import students (CSV)</Link>
+        </Button>
+      </header>
       {error && <p className="text-sm text-[var(--danger-fg)]">{error}</p>}
       {loading ? (
         <p className="text-sm text-[var(--text-secondary)]">Loading…</p>

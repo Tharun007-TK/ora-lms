@@ -471,7 +471,7 @@ async def list_my_submissions(
     return [_serialize_submission(s, student_name=user.name) for s in result.scalars().all()]
 
 
-@router.get("/assignments/mine", response_model=list[AssignmentOut])
+@router.get("/my-assignments", response_model=list[AssignmentOut])
 async def list_mine_faculty(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(require_faculty_or_admin),

@@ -354,10 +354,30 @@ export function fileUrl(url: string | null | undefined): string | null {
   return url;
 }
 
+export interface StudentImportRow {
+  line: number;
+  email: string;
+  status: 'created' | 'exists' | 'error';
+  detail?: string | null;
+  generated_password?: string | null;
+}
+
+export interface StudentImportResult {
+  total: number;
+  created: number;
+  skipped: number;
+  rows: StudentImportRow[];
+}
+
 export const users = {
   list: (role?: UserRole) =>
     apiFetch<User[]>(`/users${role ? `?role=${role}` : ''}`),
   faculty: () => apiFetch<UserBrief[]>('/users/faculty'),
+  importStudents: (file: File) => {
+    const fd = new FormData();
+    fd.set('file', file);
+    return apiUpload<StudentImportResult>('/users/students/import', fd);
+  },
 };
 
 export const auth = {
@@ -424,6 +444,13 @@ export const courses = {
       { method: 'DELETE' },
     ),
   students: (id: number) => apiFetch<UserBrief[]>(`/courses/${id}/students`),
+  performanceXlsxUrl: (id: number, studentIds?: number[]) => {
+    const qs =
+      studentIds && studentIds.length > 0
+        ? `?student_ids=${studentIds.join(',')}`
+        : '';
+    return `${API_URL}/courses/${id}/performance.xlsx${qs}`;
+  },
 };
 
 export const notes = {
@@ -496,7 +523,7 @@ export const assignments = {
       body: JSON.stringify(body),
     }),
   mySubmissions: () => apiFetch<Submission[]>('/submissions/mine'),
-  listMine: () => apiFetch<Assignment[]>('/assignments/mine'),
+  listMine: () => apiFetch<Assignment[]>('/my-assignments'),
 };
 
 export const library = {
