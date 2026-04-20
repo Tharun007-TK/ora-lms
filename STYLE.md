@@ -77,8 +77,8 @@ If a value isn't defined in those files, it doesn't exist in the system. Flag th
 
 Ask, don't assume. A small clarifying question beats a systemwide style drift that takes a week to unwind.
 
-## Status — Suspended for Days 9–12
+## Status — Reinstated on Day 13 (Ora rollout)
 
-The rules below apply in full starting Day 13 (Ora rollout).
-During Days 9–12, the rule "use Ora primitives, not shadcn primitives" is SUSPENDED.
-Use shadcn primitives (current codebase convention). Use Ora tokens for colors, type, spacing.
+All rules above apply in full. The Days 9–12 suspension is lifted. Ora primitives
+(`src/components/ora/`) are mandatory for new UI. No shadcn imports. No inline
+reimplementations of primitives that already exist in the Ora set.

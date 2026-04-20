@@ -1,18 +1,17 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from core.auth import get_current_user, require_admin
-from core.config import settings
+from core.auth import require_admin
 from core.database import get_db
 from models.tables import (
     CollegeInfo,
     Department,
-    FacultyProfile,
     User,
+    UserProfile,
     UserRole,
 )
 from schemas.requests import (
@@ -22,7 +21,6 @@ from schemas.requests import (
     DepartmentOut,
     DepartmentUpdate,
     FacultyProfileOut,
-    FacultyProfileUpdate,
     MessageResponse,
 )
 from services import storage_service
@@ -31,21 +29,23 @@ from services import storage_service
 router = APIRouter(prefix="/college", tags=["college"])
 
 
-# ---------- Helpers ----------
-
-
-def _serialize_profile(p: FacultyProfile, user: User, dept: Department | None) -> FacultyProfileOut:
+def _serialize_faculty(
+    user: User, profile: UserProfile | None, dept: Department | None
+) -> FacultyProfileOut:
     return FacultyProfileOut(
-        id=p.id,
-        user_id=p.user_id,
+        id=user.id,
+        user_id=user.id,
         name=user.name,
         email=user.email,
-        department_id=p.department_id,
+        department_id=user.department_id,
         department_name=dept.name if dept else None,
-        designation=p.designation,
-        qualifications=p.qualifications,
-        achievements=p.achievements,
-        photo_url=storage_service.resolve_url(p.photo_url),
+        designation=profile.designation if profile else None,
+        qualifications=profile.qualifications if profile else None,
+        achievements=profile.achievements if profile else None,
+        photo_url=storage_service.resolve_url(
+            profile.avatar_url if profile else None,
+            ttl_seconds=storage_service.PROFILE_SIGNED_URL_TTL_SECONDS,
+        ),
     )
 
 
@@ -83,7 +83,7 @@ async def upsert_info(
     return CollegeInfoOut.model_validate(info)
 
 
-# ---------- Departments (public list; admin writes) ----------
+# ---------- Departments ----------
 
 
 @router.get("/departments", response_model=list[DepartmentOut])
@@ -113,12 +113,17 @@ async def list_department_faculty(
         raise HTTPException(status_code=404, detail="Department not found")
 
     result = await db.execute(
-        select(FacultyProfile)
-        .options(selectinload(FacultyProfile.user))
-        .where(FacultyProfile.department_id == department_id)
+        select(User, UserProfile)
+        .outerjoin(UserProfile, UserProfile.user_id == User.id)
+        .where(
+            User.role == UserRole.faculty,
+            User.is_active.is_(True),
+            User.department_id == department_id,
+        )
+        .order_by(User.name)
     )
-    profiles = result.scalars().all()
-    return [_serialize_profile(p, p.user, dept) for p in profiles if p.user.is_active]
+    rows = result.all()
+    return [_serialize_faculty(user, profile, dept) for user, profile in rows]
 
 
 @router.post("/departments", response_model=DepartmentOut, status_code=status.HTTP_201_CREATED)
@@ -177,21 +182,20 @@ async def delete_department(
     return MessageResponse(detail="Department deleted")
 
 
-# ---------- Faculty profiles (public read) ----------
+# ---------- Faculty profiles (public read, sourced from user_profiles) ----------
 
 
 @router.get("/faculty", response_model=list[FacultyProfileOut])
 async def list_faculty(db: AsyncSession = Depends(get_db)) -> list[FacultyProfileOut]:
     result = await db.execute(
-        select(FacultyProfile).options(
-            selectinload(FacultyProfile.user),
-            selectinload(FacultyProfile.department),
-        )
+        select(User, UserProfile, Department)
+        .outerjoin(UserProfile, UserProfile.user_id == User.id)
+        .outerjoin(Department, Department.id == User.department_id)
+        .where(User.role == UserRole.faculty, User.is_active.is_(True))
+        .order_by(User.name)
     )
-    profiles = result.scalars().all()
-    return [
-        _serialize_profile(p, p.user, p.department) for p in profiles if p.user.is_active
-    ]
+    rows = result.all()
+    return [_serialize_faculty(user, profile, dept) for user, profile, dept in rows]
 
 
 @router.get("/faculty/{faculty_id}", response_model=FacultyProfileOut)
@@ -199,112 +203,14 @@ async def get_faculty(
     faculty_id: int, db: AsyncSession = Depends(get_db)
 ) -> FacultyProfileOut:
     result = await db.execute(
-        select(FacultyProfile)
+        select(User)
         .options(
-            selectinload(FacultyProfile.user),
-            selectinload(FacultyProfile.department),
+            selectinload(User.department),
+            selectinload(User.profile),
         )
-        .where(FacultyProfile.id == faculty_id)
+        .where(User.id == faculty_id, User.role == UserRole.faculty)
     )
-    profile = result.scalar_one_or_none()
-    if profile is None or not profile.user.is_active:
+    user = result.scalar_one_or_none()
+    if user is None or not user.is_active:
         raise HTTPException(status_code=404, detail="Faculty not found")
-    return _serialize_profile(profile, profile.user, profile.department)
-
-
-@router.put("/faculty/me", response_model=FacultyProfileOut)
-async def upsert_my_profile(
-    designation: str | None = Form(default=None, max_length=200),
-    qualifications: str | None = Form(default=None),
-    achievements: str | None = Form(default=None),
-    department_id: int | None = Form(default=None),
-    photo: UploadFile | None = File(default=None),
-    db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_current_user),
-) -> FacultyProfileOut:
-    if user.role != UserRole.faculty:
-        raise HTTPException(status_code=403, detail="Only faculty can set a profile")
-
-    result = await db.execute(
-        select(FacultyProfile)
-        .options(selectinload(FacultyProfile.department))
-        .where(FacultyProfile.user_id == user.id)
-    )
-    profile = result.scalar_one_or_none()
-    photo_path: str | None = None
-    if photo is not None and photo.filename:
-        stored = await storage_service.upload_file(
-            photo, bucket=settings.SUPABASE_BUCKET_LIBRARY, prefix="faculty"
-        )
-        photo_path = stored.path
-
-    dept_id = department_id if department_id is not None else (profile.department_id if profile else user.department_id)
-
-    if profile is None:
-        profile = FacultyProfile(
-            user_id=user.id,
-            designation=designation,
-            qualifications=qualifications,
-            achievements=achievements,
-            photo_url=photo_path,
-            department_id=dept_id,
-        )
-        db.add(profile)
-    else:
-        if designation is not None:
-            profile.designation = designation
-        if qualifications is not None:
-            profile.qualifications = qualifications
-        if achievements is not None:
-            profile.achievements = achievements
-        if photo_path is not None:
-            profile.photo_url = photo_path
-        if department_id is not None:
-            profile.department_id = department_id
-
-    await db.commit()
-    await db.refresh(profile)
-
-    dept = None
-    if profile.department_id is not None:
-        dept_res = await db.execute(
-            select(Department).where(Department.id == profile.department_id)
-        )
-        dept = dept_res.scalar_one_or_none()
-
-    return _serialize_profile(profile, user, dept)
-
-
-@router.patch("/faculty/{faculty_id}", response_model=FacultyProfileOut)
-async def admin_update_faculty(
-    faculty_id: int,
-    body: FacultyProfileUpdate,
-    db: AsyncSession = Depends(get_db),
-    _admin: User = Depends(require_admin),
-) -> FacultyProfileOut:
-    result = await db.execute(
-        select(FacultyProfile)
-        .options(
-            selectinload(FacultyProfile.user),
-            selectinload(FacultyProfile.department),
-        )
-        .where(FacultyProfile.id == faculty_id)
-    )
-    profile = result.scalar_one_or_none()
-    if profile is None:
-        raise HTTPException(status_code=404, detail="Faculty not found")
-
-    data = body.model_dump(exclude_unset=True)
-    for k, v in data.items():
-        setattr(profile, k, v)
-    await db.commit()
-    await db.refresh(profile)
-
-    dept = profile.department
-    if "department_id" in data and profile.department_id is not None:
-        dept_res = await db.execute(
-            select(Department).where(Department.id == profile.department_id)
-        )
-        dept = dept_res.scalar_one_or_none()
-
-    return _serialize_profile(profile, profile.user, dept)
+    return _serialize_faculty(user, user.profile, user.department)

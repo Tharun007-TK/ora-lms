@@ -1,6 +1,13 @@
 import Link from 'next/link';
 
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ora';
+import {
+  Badge,
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ora';
 import { fileUrl, type LibraryBook } from '@/lib/api';
 
 export function BookCard({
@@ -31,9 +38,9 @@ export function BookCard({
       </div>
       <CardHeader className="space-y-1">
         {book.category && (
-          <span className="w-fit rounded bg-[var(--surface-sunken)] px-2 py-0.5 t-caption font-medium text-[var(--text-secondary)]">
+          <Badge tone="neutral" className="w-fit">
             {book.category}
-          </span>
+          </Badge>
         )}
         <CardTitle className="t-h3 leading-tight">
           <Link

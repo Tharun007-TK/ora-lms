@@ -19,18 +19,25 @@ from core.auth import hash_password
 from core.database import SessionLocal
 from models.tables import (
     Assignment,
+    AssignmentType,
+    CodingAssessment,
+    CodingDifficulty,
+    CodingScoringMode,
+    CodingTestCase,
     CodingTestcase,
     CollegeInfo,
     Course,
     Department,
     Enrollment,
-    FacultyProfile,
     JudgeProblem,
     LibraryBook,
     Note,
     Notification,
     ProblemDifficulty,
+    QuizOption,
+    QuizQuestion,
     User,
+    UserProfile,
     UserRole,
 )
 
@@ -68,7 +75,7 @@ DEPARTMENTS = [
 
 FACULTY = [
     {
-        "email": "r.arun@mcet.in",
+        "email": "r.arun@drmcet.ac.in",
         "name": "Dr. R. Arunachalam",
         "dept": "CSE",
         "designation": "Professor & Head",
@@ -77,7 +84,7 @@ FACULTY = [
         "research grant on scalable academic analytics.",
     },
     {
-        "email": "p.meena@mcet.in",
+        "email": "p.meena@drmcet.ac.in",
         "name": "Dr. P. Meenakshi",
         "dept": "CSE",
         "designation": "Associate Professor",
@@ -86,7 +93,7 @@ FACULTY = [
         "student mentoring cell.",
     },
     {
-        "email": "k.senthil@mcet.in",
+        "email": "k.senthil@drmcet.ac.in",
         "name": "Mr. K. Senthilkumar",
         "dept": "ECE",
         "designation": "Assistant Professor",
@@ -94,7 +101,7 @@ FACULTY = [
         "achievements": "Built the department's FPGA lab; NPTEL elite certified.",
     },
     {
-        "email": "s.divya@mcet.in",
+        "email": "s.divya@drmcet.ac.in",
         "name": "Dr. S. Divya",
         "dept": "ECE",
         "designation": "Associate Professor",
@@ -102,7 +109,7 @@ FACULTY = [
         "achievements": "Funded project on LoRa-based agri-sensing; 12 SCI papers.",
     },
     {
-        "email": "v.raghu@mcet.in",
+        "email": "v.raghu@drmcet.ac.in",
         "name": "Dr. V. Raghuraman",
         "dept": "MECH",
         "designation": "Professor",
@@ -141,7 +148,7 @@ COURSES = [
         "description": "Asymptotic analysis, divide-and-conquer, dynamic "
         "programming, graph algorithms, and NP-completeness.",
         "department_code": "CSE",
-        "faculty_email": "r.arun@mcet.in",
+        "faculty_email": "r.arun@drmcet.ac.in",
         "semester": "2026-Spring",
     },
     {
@@ -150,7 +157,7 @@ COURSES = [
         "description": "Discrete-time signals, DFT/FFT, digital filter design, "
         "and multirate systems with MATLAB labs.",
         "department_code": "ECE",
-        "faculty_email": "s.divya@mcet.in",
+        "faculty_email": "s.divya@drmcet.ac.in",
         "semester": "2026-Spring",
     },
     {
@@ -159,7 +166,7 @@ COURSES = [
         "description": "Laws of thermodynamics, entropy, power cycles, and "
         "applied analysis of refrigeration and HVAC.",
         "department_code": "MECH",
-        "faculty_email": "v.raghu@mcet.in",
+        "faculty_email": "v.raghu@drmcet.ac.in",
         "semester": "2026-Spring",
     },
 ]
@@ -223,6 +230,200 @@ ASSIGNMENTS = [
         "max_marks": 100,
     },
 ]
+
+
+PRACTICE_PROBLEMS = [
+    # --- Easy (10 pts each) ---
+    {
+        "title": "FizzBuzz",
+        "difficulty": CodingDifficulty.easy,
+        "points": 10,
+        "description": (
+            "Read an integer N from stdin. Print the numbers from 1 to N, "
+            "one per line, with the following substitutions:\n"
+            "- Multiples of 3 → `Fizz`\n"
+            "- Multiples of 5 → `Buzz`\n"
+            "- Multiples of both → `FizzBuzz`"
+        ),
+        "test_cases": [
+            ("5\n", "1\n2\nFizz\n4\nBuzz\n", False),
+            ("3\n", "1\n2\nFizz\n", False),
+            ("1\n", "1\n", False),
+            ("15\n", "1\n2\nFizz\n4\nBuzz\nFizz\n7\n8\nFizz\nBuzz\n11\nFizz\n13\n14\nFizzBuzz\n", True),
+            ("30\n", "1\n2\nFizz\n4\nBuzz\nFizz\n7\n8\nFizz\nBuzz\n11\nFizz\n13\n14\nFizzBuzz\n16\n17\nFizz\n19\nBuzz\nFizz\n22\n23\nFizz\nBuzz\n26\nFizz\n28\n29\nFizzBuzz\n", True),
+            ("7\n", "1\n2\nFizz\n4\nBuzz\nFizz\n7\n", True),
+        ],
+    },
+    {
+        "title": "Reverse a String",
+        "difficulty": CodingDifficulty.easy,
+        "points": 10,
+        "description": (
+            "Read a single line from stdin and print the reversed string. "
+            "The input may contain spaces and printable ASCII characters."
+        ),
+        "test_cases": [
+            ("hello\n", "olleh\n", False),
+            ("Ora\n", "arO\n", False),
+            ("racecar\n", "racecar\n", False),
+            ("abc xyz\n", "zyx cba\n", True),
+            ("a\n", "a\n", True),
+            ("12345\n", "54321\n", True),
+        ],
+    },
+    {
+        "title": "Sum of Array",
+        "difficulty": CodingDifficulty.easy,
+        "points": 10,
+        "description": (
+            "First line: N (size of array). Second line: N space-separated integers. "
+            "Print their sum."
+        ),
+        "test_cases": [
+            ("3\n1 2 3\n", "6\n", False),
+            ("1\n42\n", "42\n", False),
+            ("5\n1 1 1 1 1\n", "5\n", False),
+            ("4\n-1 -2 -3 -4\n", "-10\n", True),
+            ("5\n10 20 30 40 50\n", "150\n", True),
+            ("2\n1000000 2000000\n", "3000000\n", True),
+        ],
+    },
+    # --- Medium (25 pts each) ---
+    {
+        "title": "Two Sum",
+        "difficulty": CodingDifficulty.medium,
+        "points": 25,
+        "description": (
+            "First line: N and target (space-separated). Second line: N integers. "
+            "Print the 0-based indices i and j (i<j, space-separated) such that "
+            "nums[i] + nums[j] == target. A valid pair is guaranteed to exist."
+        ),
+        "test_cases": [
+            ("4 9\n2 7 11 15\n", "0 1\n", False),
+            ("3 6\n3 2 4\n", "1 2\n", False),
+            ("2 6\n3 3\n", "0 1\n", False),
+            ("5 10\n1 2 3 4 6\n", "3 4\n", True),
+            ("4 0\n-3 4 3 90\n", "0 2\n", True),
+            ("6 8\n1 5 3 7 2 6\n", "2 3\n", True),
+        ],
+    },
+    {
+        "title": "Valid Parentheses",
+        "difficulty": CodingDifficulty.medium,
+        "points": 25,
+        "description": (
+            "Read a string of `()[]{}` characters from stdin. Print `YES` if "
+            "they're balanced and properly nested, else `NO`."
+        ),
+        "test_cases": [
+            ("()\n", "YES\n", False),
+            ("()[]{}\n", "YES\n", False),
+            ("(]\n", "NO\n", False),
+            ("({[]})\n", "YES\n", True),
+            ("([)]\n", "NO\n", True),
+            ("{{{{\n", "NO\n", True),
+        ],
+    },
+    {
+        "title": "Binary Search",
+        "difficulty": CodingDifficulty.medium,
+        "points": 25,
+        "description": (
+            "First line: N and target. Second line: N sorted integers. "
+            "Print the 0-based index of `target` using binary search, or -1 if absent."
+        ),
+        "test_cases": [
+            ("5 3\n1 2 3 4 5\n", "2\n", False),
+            ("4 10\n1 3 5 7\n", "-1\n", False),
+            ("1 5\n5\n", "0\n", False),
+            ("6 6\n1 2 3 4 5 6\n", "5\n", True),
+            ("7 4\n1 2 3 4 5 6 7\n", "3\n", True),
+            ("3 -1\n-5 -3 -1\n", "2\n", True),
+        ],
+    },
+    # --- Hard (50 pts each) ---
+    {
+        "title": "Longest Substring Without Repeating Characters",
+        "difficulty": CodingDifficulty.hard,
+        "points": 50,
+        "description": (
+            "Read a single string from stdin. Print the length of the longest "
+            "substring with no repeating characters."
+        ),
+        "test_cases": [
+            ("abcabcbb\n", "3\n", False),
+            ("bbbbb\n", "1\n", False),
+            ("pwwkew\n", "3\n", False),
+            ("abcdef\n", "6\n", True),
+            ("dvdf\n", "3\n", True),
+            ("\n", "0\n", True),
+        ],
+    },
+    {
+        "title": "Merge Intervals",
+        "difficulty": CodingDifficulty.hard,
+        "points": 50,
+        "description": (
+            "First line: N. Next N lines: `start end` for each interval. "
+            "Print merged non-overlapping intervals, one per line, sorted by start."
+        ),
+        "test_cases": [
+            ("4\n1 3\n2 6\n8 10\n15 18\n", "1 6\n8 10\n15 18\n", False),
+            ("2\n1 4\n4 5\n", "1 5\n", False),
+            ("1\n5 7\n", "5 7\n", False),
+            ("3\n1 4\n0 4\n2 3\n", "0 4\n", True),
+            ("3\n1 10\n2 3\n4 5\n", "1 10\n", True),
+            ("4\n1 2\n3 4\n5 6\n7 8\n", "1 2\n3 4\n5 6\n7 8\n", True),
+        ],
+    },
+]
+
+
+QUIZ_ASSIGNMENT = {
+    "course_code": "CS3040",
+    "title": "Quiz 1 — DAA Fundamentals",
+    "description": "Short MCQ quiz on asymptotic notation and divide-and-conquer. "
+    "Auto-graded. One attempt.",
+    "due_offset_days": 10,
+    "max_marks": 10,
+    "questions": [
+        {
+            "question_text": "Which of the following describes Big-O notation?",
+            "points": 3,
+            "options": [
+                ("Tight asymptotic bound", False),
+                ("Asymptotic upper bound", True),
+                ("Asymptotic lower bound", False),
+                ("Average-case bound", False),
+            ],
+        },
+        {
+            "question_text": (
+                "Select ALL algorithms that use the divide-and-conquer paradigm."
+            ),
+            "points": 4,
+            "options": [
+                ("Merge sort", True),
+                ("Quick sort", True),
+                ("Bubble sort", False),
+                ("Binary search", True),
+                ("Linear search", False),
+            ],
+        },
+        {
+            "question_text": (
+                "Which complexity classes grow *strictly faster* than O(n log n)?"
+            ),
+            "points": 3,
+            "options": [
+                ("O(n)", False),
+                ("O(n^2)", True),
+                ("O(2^n)", True),
+                ("O(log n)", False),
+            ],
+        },
+    ],
+}
 
 
 LIBRARY_BOOKS = [
@@ -368,7 +569,7 @@ async def seed() -> None:
         # Admin
         admin = await _get_or_create_user(
             db,
-            email="admin@mcet.ac.in",
+            email="admin@drmcet.ac.in",
             name="Ora Admin",
             role=UserRole.admin,
             department_id=None,
@@ -384,8 +585,9 @@ async def seed() -> None:
                 description=d["description"],
             )
 
-        # Faculty + profiles
+        # Faculty (profile rows handled in unified block below)
         faculty_map: dict[str, User] = {}
+        faculty_extra: dict[int, dict] = {}
         for f in FACULTY:
             dept = dept_map[f["dept"]]
             user = await _get_or_create_user(
@@ -396,22 +598,11 @@ async def seed() -> None:
                 department_id=dept.id,
             )
             faculty_map[f["email"]] = user
-
-            profile_exists = (
-                await db.execute(
-                    select(FacultyProfile).where(FacultyProfile.user_id == user.id)
-                )
-            ).scalar_one_or_none()
-            if not profile_exists:
-                db.add(
-                    FacultyProfile(
-                        user_id=user.id,
-                        designation=f["designation"],
-                        qualifications=f["qualifications"],
-                        achievements=f["achievements"],
-                        department_id=dept.id,
-                    )
-                )
+            faculty_extra[user.id] = {
+                "designation": f["designation"],
+                "qualifications": f["qualifications"],
+                "achievements": f["achievements"],
+            }
 
         # Students
         student_map: dict[str, User] = {}
@@ -422,6 +613,30 @@ async def seed() -> None:
                 name=name,
                 role=UserRole.student,
                 department_id=dept_map[dept_code].id,
+            )
+
+        # User profiles — 1:1 with users (Day 9). Faculty get the rich faculty
+        # fields + is_public=True; everyone else gets a minimal row.
+        all_users: list[User] = [admin, *faculty_map.values(), *student_map.values()]
+        for u in all_users:
+            existing = (
+                await db.execute(
+                    select(UserProfile).where(UserProfile.user_id == u.id)
+                )
+            ).scalar_one_or_none()
+            if existing is not None:
+                continue
+            extra = faculty_extra.get(u.id, {})
+            db.add(
+                UserProfile(
+                    user_id=u.id,
+                    links=[],
+                    skills=[],
+                    designation=extra.get("designation"),
+                    qualifications=extra.get("qualifications"),
+                    achievements=extra.get("achievements"),
+                    is_public=(u.role == UserRole.faculty),
+                )
             )
 
         # College info (single row)
@@ -512,6 +727,88 @@ async def seed() -> None:
                         due_date=now + timedelta(days=a["due_offset_days"]),
                         max_marks=a["max_marks"],
                         created_by=course.faculty_id,
+                    )
+                )
+
+        # Quiz assignment (Day 11)
+        q_course = course_map[QUIZ_ASSIGNMENT["course_code"]]
+        existing_quiz = (
+            await db.execute(
+                select(Assignment).where(
+                    Assignment.course_id == q_course.id,
+                    Assignment.title == QUIZ_ASSIGNMENT["title"],
+                )
+            )
+        ).scalar_one_or_none()
+        if existing_quiz is None:
+            quiz_a = Assignment(
+                course_id=q_course.id,
+                title=QUIZ_ASSIGNMENT["title"],
+                description=QUIZ_ASSIGNMENT["description"],
+                due_date=now + timedelta(days=QUIZ_ASSIGNMENT["due_offset_days"]),
+                max_marks=QUIZ_ASSIGNMENT["max_marks"],
+                created_by=q_course.faculty_id,
+                type=AssignmentType.quiz,
+            )
+            db.add(quiz_a)
+            await db.flush()
+            for q_idx, q in enumerate(QUIZ_ASSIGNMENT["questions"]):
+                question = QuizQuestion(
+                    assignment_id=quiz_a.id,
+                    question_text=q["question_text"],
+                    position=q_idx,
+                    points=q["points"],
+                )
+                db.add(question)
+                await db.flush()
+                for o_idx, (text, is_correct) in enumerate(q["options"]):
+                    db.add(
+                        QuizOption(
+                            question_id=question.id,
+                            option_text=text,
+                            is_correct=is_correct,
+                            position=o_idx,
+                        )
+                    )
+
+        # Practice problems (Day 14 UPDATE.md) — coding_assessments with is_practice=True.
+        for prob in PRACTICE_PROBLEMS:
+            existing = (
+                await db.execute(
+                    select(CodingAssessment).where(
+                        CodingAssessment.title == prob["title"],
+                        CodingAssessment.is_practice.is_(True),
+                    )
+                )
+            ).scalar_one_or_none()
+            if existing is not None:
+                continue
+            ca = CodingAssessment(
+                course_id=None,
+                created_by=admin.id,
+                title=prob["title"],
+                description=prob["description"],
+                allowed_languages=["python", "cpp", "java", "javascript", "c"],
+                time_limit_seconds=2,
+                memory_limit_mb=256,
+                max_score=100,
+                scoring_mode=CodingScoringMode.partial,
+                max_attempts=50,
+                is_practice=True,
+                points=prob["points"],
+                difficulty=prob["difficulty"],
+            )
+            db.add(ca)
+            await db.flush()
+            for idx, (stdin, expected, hidden) in enumerate(prob["test_cases"]):
+                db.add(
+                    CodingTestCase(
+                        assessment_id=ca.id,
+                        input=stdin,
+                        expected_output=expected,
+                        is_hidden=hidden,
+                        weight=1,
+                        order_index=idx,
                     )
                 )
 
@@ -619,8 +916,8 @@ async def seed() -> None:
         await db.commit()
 
     print("Seed complete.")
-    print(f"  Admin:   admin@mcet.ac.in  /  {DEFAULT_PASSWORD}")
-    print(f"  Faculty: r.arun@mcet.in    /  {DEFAULT_PASSWORD}  (and 4 more)")
+    print(f"  Admin:   admin@drmcet.ac.in  /  {DEFAULT_PASSWORD}")
+    print(f"  Faculty: r.arun@drmcet.ac.in  /  {DEFAULT_PASSWORD}  (and 4 more)")
     print(f"  Student: 727622bam046@mcet.in  /  {DEFAULT_PASSWORD}  (and 15 more)")
 
 

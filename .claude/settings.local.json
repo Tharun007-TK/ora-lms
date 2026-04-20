@@ -1,6 +1,27 @@
 {
   "permissions": {
-    "allow": [],
+    "allow": [
+      "Bash(git push *)",
+      "Bash(venv/Scripts/alembic.exe current *)",
+      "Bash(venv/Scripts/pip.exe install *)",
+      "Bash(venv/Scripts/alembic.exe upgrade *)",
+      "Bash(venv/Scripts/python.exe -c 'import asyncio; from core.database import SessionLocal; from sqlalchemy import text *)",
+      "Bash(venv/Scripts/python.exe seed.py)",
+      "Bash(venv/Scripts/python.exe -c \"from main import app; print\\('backend imports OK'\\); print\\('routes:', len\\(app.routes\\)\\)\")",
+      "Bash(npx tsc *)",
+      "Bash(venv/Scripts/python.exe -c ' *)",
+      "Bash(venv/Scripts/python.exe -c \"from main import app; from models.tables import AssignmentType, QuizQuestion, QuizOption, QuizAttempt, QuizAnswer; print\\('models load OK'\\)\")",
+      "Bash(venv/Scripts/python.exe -c \"from main import app; print\\('routes:', len\\(app.routes\\)\\); quiz_routes = [r.path for r in app.routes if '/quiz' in getattr\\(r, 'path', ''\\)]; [print\\(' ', p\\) for p in quiz_routes]\")",
+      "Bash(npm install *)",
+      "Bash(venv/Scripts/python.exe -c \"from main import app; r = [route.path for route in app.routes if '/calendar' in getattr\\(route, 'path', ''\\)]; print\\('calendar routes:', r\\)\")",
+      "Bash(venv/Scripts/python.exe -c \"from main import app; print\\('ok, routes:', len\\(app.routes\\)\\)\")",
+      "Bash(venv/Scripts/python.exe -c \"from main import app; print\\('routes:', len\\(app.routes\\)\\)\")",
+      "Bash(venv/Scripts/python.exe -c \"from main import app; r=[route.path for route in app.routes if '/api/coding' in getattr\\(route,'path',''\\)]; print\\(len\\(r\\), 'coding routes'\\); [print\\(' ',p\\) for p in r]\")",
+      "Bash(venv/Scripts/python.exe -c \"from main import app; paths=[r.path for r in app.routes if 'assignments/mine' in getattr\\(r,'path',''\\)]; print\\(paths\\)\")",
+      "Bash(curl *)",
+      "Bash(tasklist)",
+      "Bash(venv/Scripts/python.exe -c \"from main import app; runs=[r.path for r in app.routes if '/run' in getattr\\(r,'path',''\\)]; print\\('run routes:', runs\\); print\\('total:', len\\(app.routes\\)\\)\")"
+    ],
     "deny": [
       "Bash(python -c:*)",
       "Bash(python3 -c:*)",

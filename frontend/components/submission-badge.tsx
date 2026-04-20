@@ -1,11 +1,13 @@
-import { cn } from '@/lib/utils';
+import { Badge } from '@/components/ora';
 
-const STYLES: Record<string, string> = {
-  AC: 'bg-[var(--success-bg)] text-[var(--success-fg)] border-[var(--success-fg)]/40',
-  WA: 'bg-[var(--danger-bg)] text-[var(--danger-fg)] border-[var(--danger-fg)]/40',
-  TLE: 'bg-[var(--warning-bg)] text-[var(--warning-fg)] border-[var(--warning-fg)]/40',
-  RE: 'bg-[var(--danger-bg)] text-[var(--danger-fg)] border-[var(--danger-fg)]/40',
-  CE: 'bg-[var(--info-bg)] text-[var(--info-fg)] border-[var(--info-fg)]/40',
+type BadgeTone = 'neutral' | 'info' | 'success' | 'warning' | 'danger';
+
+const VERDICT_TONE: Record<string, BadgeTone> = {
+  AC: 'success',
+  WA: 'danger',
+  TLE: 'warning',
+  RE: 'danger',
+  CE: 'info',
 };
 
 export function SubmissionBadge({
@@ -15,18 +17,10 @@ export function SubmissionBadge({
   verdict: string;
   className?: string;
 }) {
-  const style =
-    STYLES[verdict] ||
-    'bg-[var(--surface-sunken)] text-[var(--text-muted)] border-[var(--surface-border)]';
+  const tone: BadgeTone = VERDICT_TONE[verdict] ?? 'neutral';
   return (
-    <span
-      className={cn(
-        'inline-flex items-center rounded-full border px-2 py-0.5 t-caption font-semibold',
-        style,
-        className,
-      )}
-    >
+    <Badge tone={tone} size="md" className={className}>
       {verdict}
-    </span>
+    </Badge>
   );
 }

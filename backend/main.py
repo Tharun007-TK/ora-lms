@@ -11,14 +11,18 @@ from core.database import engine
 from routers import ai as ai_router
 from routers import assignments as assignments_router
 from routers import auth as auth_router
+from routers import calendar as calendar_router
+from routers import coding_assessments as coding_assessments_router
 from routers import college as college_router
 from routers import courses as courses_router
 from routers import judge as judge_router
 from routers import library as library_router
 from routers import notes as notes_router
 from routers import notifications as notifications_router
+from routers import profile as profile_router
 from routers import users as users_router
 from services import storage_service
+from services.judge0_client import judge0_client
 
 
 @asynccontextmanager
@@ -44,8 +48,17 @@ app.add_middleware(
 
 
 @app.get("/health", tags=["meta"])
-async def health() -> dict[str, str]:
-    return {"status": "ok", "env": settings.ENVIRONMENT}
+async def health() -> dict:
+    judge0_ok = True
+    try:
+        await judge0_client.about()
+    except Exception:
+        judge0_ok = False
+    return {
+        "status": "ok",
+        "env": settings.ENVIRONMENT,
+        "judge0": judge0_ok,
+    }
 
 
 @app.get("/files/{path:path}", tags=["meta"], include_in_schema=False)
@@ -69,3 +82,6 @@ app.include_router(college_router.router)
 app.include_router(ai_router.router)
 app.include_router(judge_router.router)
 app.include_router(notifications_router.router)
+app.include_router(profile_router.router)
+app.include_router(calendar_router.router)
+app.include_router(coding_assessments_router.router)

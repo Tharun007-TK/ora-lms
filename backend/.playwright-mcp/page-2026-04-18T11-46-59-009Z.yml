@@ -1,0 +1,21 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e4]:
+    - generic [ref=e5]:
+      - heading "Welcome to Ora" [level=2] [ref=e6]
+      - paragraph [ref=e7]: Sign in with your MCET account to continue.
+    - generic [ref=e8]:
+      - generic [ref=e9]:
+        - text: Email
+        - textbox "Email" [ref=e10]:
+          - /placeholder: you@mcet.ac.in
+      - generic [ref=e11]:
+        - text: Password
+        - textbox "Password" [ref=e12]:
+          - /placeholder: ••••••••
+    - generic [ref=e13]:
+      - button "Sign in" [disabled]
+      - paragraph [ref=e14]:
+        - text: No account?
+        - link "Register" [ref=e15] [cursor=pointer]:
+          - /url: /register
+  - alert [ref=e16]

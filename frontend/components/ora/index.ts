@@ -4,3 +4,6 @@ export * from './Label';
 export * from './Card';
 export * from './Select';
 export * from './Skeleton';
+export * from './Badge';
+export * from './Avatar';
+export * from './Table';

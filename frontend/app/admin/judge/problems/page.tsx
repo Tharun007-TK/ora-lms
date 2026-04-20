@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 
-import { Button } from '@/components/ora';
+import { Button, TBody, TD, TH, THead, TR, Table } from '@/components/ora';
 import { judge, type JudgeProblemBrief } from '@/lib/api';
 
 export default function AdminJudgeProblemsPage() {
@@ -58,25 +58,25 @@ export default function AdminJudgeProblemsPage() {
       ) : items.length === 0 ? (
         <p className="text-sm text-[var(--text-secondary)]">No problems yet.</p>
       ) : (
-        <div className="overflow-hidden rounded-lg border">
-          <table className="w-full text-sm">
-            <thead className="bg-[var(--surface-sunken)] text-left text-xs uppercase text-[var(--text-secondary)]">
-              <tr>
-                <th className="px-4 py-2">Title</th>
-                <th className="px-4 py-2">Difficulty</th>
-                <th className="px-4 py-2">Created</th>
-                <th className="px-4 py-2" />
-              </tr>
-            </thead>
-            <tbody>
+        <div className="overflow-hidden rounded-lg border-hair">
+          <Table>
+            <THead className="bg-[var(--surface-sunken)]">
+              <TR>
+                <TH>Title</TH>
+                <TH>Difficulty</TH>
+                <TH>Created</TH>
+                <TH />
+              </TR>
+            </THead>
+            <TBody>
               {items.map((p) => (
-                <tr key={p.id} className="border-t">
-                  <td className="px-4 py-2 font-medium">{p.title}</td>
-                  <td className="px-4 py-2 capitalize">{p.difficulty}</td>
-                  <td className="px-4 py-2 text-[var(--text-secondary)]">
+                <TR key={p.id}>
+                  <TD className="font-medium">{p.title}</TD>
+                  <TD className="capitalize">{p.difficulty}</TD>
+                  <TD className="text-[var(--text-secondary)]">
                     {new Date(p.created_at).toLocaleDateString()}
-                  </td>
-                  <td className="px-4 py-2 text-right">
+                  </TD>
+                  <TD className="text-right">
                     <Button
                       size="sm"
                       variant="danger"
@@ -84,11 +84,11 @@ export default function AdminJudgeProblemsPage() {
                     >
                       Delete
                     </Button>
-                  </td>
-                </tr>
+                  </TD>
+                </TR>
               ))}
-            </tbody>
-          </table>
+            </TBody>
+          </Table>
         </div>
       )}
     </div>

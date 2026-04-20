@@ -1,4 +1,5 @@
 import {
+  Badge,
   Card,
   CardContent,
   CardDescription,
@@ -22,14 +23,7 @@ export function NoteCard({
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle>{note.title}</CardTitle>
-          {note.ai_generated && (
-            <span
-              className="rounded-full px-2 py-0.5 t-caption font-medium text-[var(--ember)]"
-              style={{ backgroundColor: 'rgba(216, 90, 48, 0.1)' }}
-            >
-              AI
-            </span>
-          )}
+          {note.ai_generated && <Badge tone="ember">AI</Badge>}
         </div>
         <CardDescription>
           {new Date(note.created_at).toLocaleDateString()}

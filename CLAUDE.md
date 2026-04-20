@@ -35,11 +35,11 @@
 | Storage | Supabase Storage — buckets: `notes`, `library`, `submissions`, `avatars` |
 | AI — Notes Maker | Groq API (PDF text → structured notes via PyMuPDF) |
 | AI — Assistant | Anthropic Claude API + LlamaIndex RAG + pgvector |
-| Code Execution | Judge0 CE — public API (`https://judge0-ce.p.rapidapi.com`) with `JUDGE0_API_KEY` |
+| Code Execution | Judge0 CE — public (`https://ce.judge0.com`, no auth) or self-hosted with `X-Auth-Token` |
 | Realtime | Redis pub/sub → SSE stream to frontend |
 | Deployment target | Vercel (frontend), Render (backend + Redis) — pending |
 
-> **Judge0 note:** Free public API has a 50 req/day cap. For production, self-host Judge0 CE via Docker Compose on the same VPS as the backend. `JUDGE0_BASE_URL` + `JUDGE0_API_KEY` switch between instances.
+> **Judge0 note:** Currently using the free public instance at `https://ce.judge0.com` with no auth. Single env var: `JUDGE0_API_URL`. RapidAPI path is commented out pending prod provisioning.
 
 ---
 
@@ -554,8 +554,7 @@ async def embed_note(note_id: int, content: str):
 ## Code Judge Service (`services/judge_service.py`)
 
 ```python
-JUDGE0_BASE_URL = settings.JUDGE0_BASE_URL
-JUDGE0_API_KEY  = settings.JUDGE0_API_KEY
+JUDGE0_API_URL = settings.JUDGE0_API_URL  # public ce.judge0.com, no auth
 
 async def submit_code(source_code, language_id, stdin) -> dict:
     # POST /submissions?base64_encoded=false&wait=false → token
@@ -654,8 +653,9 @@ ANTHROPIC_API_KEY=
 GROQ_API_KEY=
 SUPABASE_URL=
 SUPABASE_SERVICE_KEY=
-JUDGE0_BASE_URL=https://judge0-ce.p.rapidapi.com
-JUDGE0_API_KEY=
+JUDGE0_API_URL=https://ce.judge0.com
+JUDGE0_WAIT=false
+JUDGE0_TIMEOUT_SECONDS=10
 REDIS_URL=redis://...
 ```
 

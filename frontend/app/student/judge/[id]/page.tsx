@@ -6,8 +6,10 @@ import { useParams } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 
 import { SubmissionBadge } from '@/components/submission-badge';
-import { Button } from '@/components/ora';
+import { TestCaseViewer } from '@/components/testcase-viewer';
 import {
+  Badge,
+  Button,
   Card,
   CardContent,
   CardDescription,
@@ -18,8 +20,17 @@ import {
   judge,
   LANGUAGES,
   type JudgeProblem,
+  type JudgeRunResult,
   type JudgeSubmission,
+  type JudgeSubmitResult,
+  type ProblemDifficulty,
 } from '@/lib/api';
+
+const DIFFICULTY_TONE: Record<ProblemDifficulty, 'success' | 'warning' | 'danger'> = {
+  easy: 'success',
+  medium: 'warning',
+  hard: 'danger',
+};
 
 const MonacoEditor = dynamic(() => import('@monaco-editor/react'), {
   ssr: false,
@@ -43,7 +54,9 @@ export default function StudentProblemPage() {
   const [languageId, setLanguageId] = useState<number>(71);
   const [code, setCode] = useState<string>(STARTER[71]);
   const [submitting, setSubmitting] = useState(false);
-  const [result, setResult] = useState<JudgeSubmission | null>(null);
+  const [running, setRunning] = useState(false);
+  const [runResult, setRunResult] = useState<JudgeRunResult | null>(null);
+  const [result, setResult] = useState<JudgeSubmitResult | null>(null);
   const [history, setHistory] = useState<JudgeSubmission[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -80,11 +93,30 @@ export default function StudentProblemPage() {
     }
   };
 
+  const onRun = async () => {
+    if (!problem) return;
+    setRunning(true);
+    setError(null);
+    setRunResult(null);
+    try {
+      const r = await judge.run(problem.id, {
+        language_id: languageId,
+        source_code: code,
+      });
+      setRunResult(r);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Run failed');
+    } finally {
+      setRunning(false);
+    }
+  };
+
   const onSubmit = async () => {
     if (!problem) return;
     setSubmitting(true);
     setError(null);
     setResult(null);
+    setRunResult(null);
     try {
       const sub = await judge.submit(problem.id, {
         language_id: languageId,
@@ -124,17 +156,9 @@ export default function StudentProblemPage() {
           ← Back to problems
         </Link>
         <div className="flex items-center gap-3">
-          <span
-            className={`rounded-full px-2 py-0.5 text-xs font-semibold capitalize ${
-              problem.difficulty === 'easy'
-                ? 'bg-emerald-500/15 text-emerald-600'
-                : problem.difficulty === 'medium'
-                ? 'bg-amber-500/15 text-amber-700'
-                : 'bg-red-500/15 text-red-600'
-            }`}
-          >
+          <Badge tone={DIFFICULTY_TONE[problem.difficulty]}>
             {problem.difficulty}
-          </span>
+          </Badge>
           <h1 className="text-2xl font-semibold">{problem.title}</h1>
         </div>
       </header>
@@ -238,8 +262,20 @@ export default function StudentProblemPage() {
                   }}
                 />
               </div>
-              <div className="mt-3 flex justify-end">
-                <Button onClick={onSubmit} disabled={submitting || !code.trim()}>
+              <div className="mt-3 flex justify-end gap-2">
+                <Button
+                  variant="secondary"
+                  onClick={onRun}
+                  disabled={running || submitting || !code.trim()}
+                  loading={running}
+                >
+                  {running ? 'Running…' : 'Run'}
+                </Button>
+                <Button
+                  onClick={onSubmit}
+                  disabled={submitting || running || !code.trim()}
+                  loading={submitting}
+                >
                   {submitting ? 'Judging…' : 'Submit'}
                 </Button>
               </div>
@@ -247,39 +283,30 @@ export default function StudentProblemPage() {
             </CardContent>
           </Card>
 
+          {runResult && (
+            <TestCaseViewer
+              title="Test run (not submitted) — visible cases"
+              status={runResult.status}
+              passed={runResult.passed}
+              total={runResult.total}
+              timeMs={runResult.time_ms}
+              memoryKb={runResult.memory_kb}
+              stderr={runResult.stderr}
+              testCases={runResult.test_cases}
+            />
+          )}
+
           {result && (
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0">
-                <CardTitle className="text-base">Latest verdict</CardTitle>
-                <SubmissionBadge verdict={result.status} />
-              </CardHeader>
-              <CardContent className="space-y-2 text-sm">
-                <p className="text-[var(--text-secondary)]">
-                  {result.time_ms !== null && `${result.time_ms} ms · `}
-                  {result.memory_kb !== null && `${result.memory_kb} KB`}
-                </p>
-                {result.stdout && (
-                  <div>
-                    <p className="text-xs uppercase text-[var(--text-secondary)]">
-                      stdout
-                    </p>
-                    <pre className="whitespace-pre-wrap rounded-md border bg-[var(--surface-sunken)] p-2 text-xs">
-                      {result.stdout}
-                    </pre>
-                  </div>
-                )}
-                {result.stderr && (
-                  <div>
-                    <p className="text-xs uppercase text-[var(--text-secondary)]">
-                      stderr
-                    </p>
-                    <pre className="whitespace-pre-wrap rounded-md border bg-red-500/5 p-2 text-xs text-red-600 dark:text-red-400">
-                      {result.stderr}
-                    </pre>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+            <TestCaseViewer
+              title={`Submission #${result.submission_id} · ${new Date(result.submitted_at).toLocaleString()}`}
+              status={result.status}
+              passed={result.passed}
+              total={result.total}
+              timeMs={result.time_ms}
+              memoryKb={result.memory_kb}
+              stderr={result.stderr}
+              testCases={result.test_cases}
+            />
           )}
 
           {history.length > 0 && (

@@ -5,12 +5,28 @@ import { useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 import { AssignmentCard } from '@/components/assignment-card';
-import { assignments, fileUrl, type Assignment, type Submission } from '@/lib/api';
+import {
+  Badge,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ora';
+import {
+  assignments,
+  coding,
+  fileUrl,
+  type Assignment,
+  type CodingAssessmentBrief,
+  type Submission,
+} from '@/lib/api';
 
 export default function StudentAssignmentsPage() {
   const params = useParams<{ id: string }>();
   const courseId = Number(params.id);
   const [items, setItems] = useState<Assignment[]>([]);
+  const [codingItems, setCodingItems] = useState<CodingAssessmentBrief[]>([]);
   const [mine, setMine] = useState<Record<number, Submission>>({});
   const [activeUpload, setActiveUpload] = useState<number | null>(null);
   const [progress, setProgress] = useState<Record<number, number>>({});
@@ -19,11 +35,15 @@ export default function StudentAssignmentsPage() {
 
   const load = async () => {
     try {
-      const [list, submissions] = await Promise.all([
+      const [list, submissions, code] = await Promise.all([
         assignments.list(courseId),
         assignments.mySubmissions(),
+        coding
+          .listForCourse(courseId)
+          .catch(() => [] as CodingAssessmentBrief[]),
       ]);
       setItems(list);
+      setCodingItems(code);
       const byId: Record<number, Submission> = {};
       for (const s of submissions) byId[s.assignment_id] = s;
       setMine(byId);
@@ -95,17 +115,84 @@ export default function StudentAssignmentsPage() {
 
       {error && <p className="text-sm text-[var(--danger-fg)]">{error}</p>}
 
+      {codingItems.length > 0 && (
+        <section className="space-y-3">
+          <h2 className="t-caption font-semibold uppercase tracking-wide text-[var(--ember)]">
+            Coding assessments
+          </h2>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {codingItems.map((c) => (
+              <Link
+                key={c.id}
+                href={`/student/courses/${courseId}/assignments/${c.id}/code`}
+                className="focus-ora rounded-lg"
+              >
+                <Card className="h-full transition-colors hover:border-[var(--ember)]">
+                  <CardHeader>
+                    <div className="flex items-start justify-between gap-2">
+                      <CardTitle className="text-base">{c.title}</CardTitle>
+                      <Badge tone="ember">Code</Badge>
+                    </div>
+                    <CardDescription>
+                      {c.allowed_languages.length} language
+                      {c.allowed_languages.length === 1 ? '' : 's'}
+                      {c.due_date &&
+                        ` · due ${new Date(c.due_date).toLocaleDateString()}`}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="flex items-center justify-between">
+                    <span className="t-caption text-[var(--text-secondary)]">
+                      {c.attempts_used ?? 0} / {c.max_attempts} attempts
+                    </span>
+                    {c.best_score != null && (
+                      <Badge
+                        tone={
+                          c.best_score === c.max_score ? 'success' : 'warning'
+                        }
+                      >
+                        Best {c.best_score}/{c.max_score}
+                      </Badge>
+                    )}
+                  </CardContent>
+                </Card>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
+
       {loading ? (
         <p className="text-sm text-[var(--text-secondary)]">Loading…</p>
-      ) : items.length === 0 ? (
+      ) : items.length === 0 && codingItems.length === 0 ? (
         <p className="text-sm text-[var(--text-secondary)]">No assignments published yet.</p>
-      ) : (
+      ) : items.length === 0 ? null : (
         <div className="grid gap-4 md:grid-cols-2">
           {items.map((a) => {
             const submission = mine[a.id];
             const file = fileUrl(submission?.file_url);
             const pct = progress[a.id] ?? 0;
             const uploading = activeUpload === a.id;
+
+            if (a.type === 'quiz') {
+              return (
+                <AssignmentCard
+                  key={a.id}
+                  assignment={a}
+                  footer={
+                    <Link
+                      href={`/student/courses/${courseId}/assignments/${a.id}/attempt`}
+                      className="inline-flex h-9 items-center justify-center rounded-md bg-[var(--ember)] px-3 text-sm font-medium text-[var(--ember-ink)] hover:opacity-90"
+                    >
+                      {a.submitted
+                        ? 'Review result'
+                        : a.attempt_id != null
+                        ? 'Resume quiz'
+                        : 'Take quiz'}
+                    </Link>
+                  }
+                />
+              );
+            }
 
             return (
               <AssignmentCard

@@ -1,6 +1,7 @@
 import Link from 'next/link';
 
 import {
+  Badge,
   Card,
   CardContent,
   CardDescription,
@@ -23,9 +24,9 @@ export function CourseCard({
     <Card className="flex h-full flex-col">
       <CardHeader>
         <div className="flex items-center justify-between">
-          <span className="rounded bg-[var(--surface-sunken)] px-2 py-0.5 t-caption font-medium text-[var(--text-secondary)]">
+          <Badge tone="neutral" className="normal-case tracking-normal">
             {course.code}
-          </span>
+          </Badge>
           {course.semester && (
             <span className="t-caption">{course.semester}</span>
           )}

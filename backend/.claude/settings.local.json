@@ -24,7 +24,9 @@
       "mcp__plugin_playwright_playwright__browser_click",
       "mcp__plugin_playwright_playwright__browser_close",
       "Bash(powershell -c \"Stop-Process -Id 30972 -Force\")",
-      "Bash(node -e \"const c=require\\('./next.config.js'\\);console.log\\(JSON.stringify\\(c, null, 2\\)\\)\")"
+      "Bash(node -e \"const c=require\\('./next.config.js'\\);console.log\\(JSON.stringify\\(c, null, 2\\)\\)\")",
+      "mcp__plugin_serena_serena__replace_content",
+      "mcp__plugin_serena_serena__activate_project"
     ]
   }
 }

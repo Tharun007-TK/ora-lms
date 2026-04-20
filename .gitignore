@@ -1,0 +1,18 @@
+# Repo-local documentation notes (do not commit)
+CLAUDE.md
+JUDGE0.md
+STYLE.md
+UPDATE.md
+
+# Local DB backups
+backup_*.sql
+
+# Local tool/runtime folders
+playwright-mcp/
+frontend/.serena/
+
+# Local screenshots used during manual testing
+backend/ora-*.png
+
+# Logs
+*.log

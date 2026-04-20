@@ -1,0 +1,32 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - complementary [ref=e3]:
+      - generic [ref=e4]:
+        - paragraph [ref=e5]: Ora
+        - paragraph [ref=e6]: admin workspace
+      - navigation [ref=e7]:
+        - link "Dashboard" [ref=e8] [cursor=pointer]:
+          - /url: /admin/dashboard
+        - link "Users" [ref=e9] [cursor=pointer]:
+          - /url: /admin/users
+        - link "Departments" [ref=e10] [cursor=pointer]:
+          - /url: /admin/departments
+        - link "Courses" [ref=e11] [cursor=pointer]:
+          - /url: /admin/courses
+        - link "Library" [ref=e12] [cursor=pointer]:
+          - /url: /admin/library
+        - link "College" [ref=e13] [cursor=pointer]:
+          - /url: /admin/college
+        - link "Judge Problems" [ref=e14] [cursor=pointer]:
+          - /url: /admin/judge/problems
+        - link "Analytics" [ref=e15] [cursor=pointer]:
+          - /url: /admin/analytics
+    - generic [ref=e16]:
+      - banner [ref=e17]:
+        - generic [ref=e18]: Loading…
+        - button "Sign out" [ref=e20] [cursor=pointer]
+      - main [ref=e21]:
+        - generic [ref=e22]:
+          - heading "Users" [level=1] [ref=e23]
+          - paragraph [ref=e24]: Failed to fetch
+  - alert [ref=e25]

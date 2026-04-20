@@ -2,9 +2,17 @@
 
 import { useEffect, useState } from 'react';
 
-import { Button } from '@/components/ora';
-import { Input } from '@/components/ora';
-import { Label } from '@/components/ora';
+import {
+  Button,
+  Input,
+  Label,
+  TBody,
+  TD,
+  TH,
+  THead,
+  TR,
+  Table,
+} from '@/components/ora';
 import { college, type Department } from '@/lib/api';
 
 export default function AdminDepartmentsPage() {
@@ -115,25 +123,25 @@ export default function AdminDepartmentsPage() {
       ) : items.length === 0 ? (
         <p className="text-sm text-[var(--text-secondary)]">No departments yet.</p>
       ) : (
-        <div className="overflow-hidden rounded-lg border">
-          <table className="w-full text-sm">
-            <thead className="bg-[var(--surface-sunken)] text-left text-xs uppercase text-[var(--text-secondary)]">
-              <tr>
-                <th className="px-4 py-2">Code</th>
-                <th className="px-4 py-2">Name</th>
-                <th className="px-4 py-2">Description</th>
-                <th className="px-4 py-2" />
-              </tr>
-            </thead>
-            <tbody>
+        <div className="overflow-hidden rounded-lg border-hair">
+          <Table>
+            <THead className="bg-[var(--surface-sunken)]">
+              <TR>
+                <TH>Code</TH>
+                <TH>Name</TH>
+                <TH>Description</TH>
+                <TH />
+              </TR>
+            </THead>
+            <TBody>
               {items.map((d) => (
-                <tr key={d.id} className="border-t">
-                  <td className="px-4 py-2 font-medium">{d.code}</td>
-                  <td className="px-4 py-2">{d.name}</td>
-                  <td className="px-4 py-2 text-[var(--text-secondary)]">
+                <TR key={d.id}>
+                  <TD className="font-medium">{d.code}</TD>
+                  <TD>{d.name}</TD>
+                  <TD className="text-[var(--text-secondary)]">
                     {d.description || '—'}
-                  </td>
-                  <td className="px-4 py-2 text-right">
+                  </TD>
+                  <TD className="text-right">
                     <Button
                       size="sm"
                       variant="danger"
@@ -141,11 +149,11 @@ export default function AdminDepartmentsPage() {
                     >
                       Delete
                     </Button>
-                  </td>
-                </tr>
+                  </TD>
+                </TR>
               ))}
-            </tbody>
-          </table>
+            </TBody>
+          </Table>
         </div>
       )}
     </div>

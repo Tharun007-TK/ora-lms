@@ -10,9 +10,11 @@ raw Supabase object URLs.
 """
 from __future__ import annotations
 
+import io
 import os
 import re
 import secrets
+import time
 import uuid
 from dataclasses import dataclass
 from pathlib import Path
@@ -26,7 +28,19 @@ from core.config import settings
 LOCAL_ROOT: Final[Path] = Path(__file__).resolve().parent.parent / "uploads"
 LOCAL_ROOT.mkdir(parents=True, exist_ok=True)
 
-SIGNED_URL_TTL_SECONDS: Final[int] = 60 * 15  # 15 min
+SIGNED_URL_TTL_SECONDS: Final[int] = 60 * 15  # 15 min (default)
+PROFILE_SIGNED_URL_TTL_SECONDS: Final[int] = 60 * 60  # 1 hour (avatars/covers)
+
+AVATAR_MAX_BYTES: Final[int] = 2 * 1024 * 1024  # 2 MB
+COVER_MAX_BYTES: Final[int] = 5 * 1024 * 1024  # 5 MB
+ALLOWED_IMAGE_MIME: Final[frozenset[str]] = frozenset(
+    {"image/jpeg", "image/png", "image/webp"}
+)
+_IMAGE_EXT: Final[dict[str, str]] = {
+    "image/jpeg": "jpg",
+    "image/png": "png",
+    "image/webp": "webp",
+}
 
 _SAFE_NAME = re.compile(r"[^A-Za-z0-9._-]+")
 
@@ -100,7 +114,11 @@ async def upload_file(file: UploadFile, *, bucket: str, prefix: str) -> StoredFi
     return StoredFile(path=f"local:{rel.as_posix()}", content_type=content_type)
 
 
-def resolve_url(stored_path: str | None) -> str | None:
+def resolve_url(
+    stored_path: str | None,
+    *,
+    ttl_seconds: int = SIGNED_URL_TTL_SECONDS,
+) -> str | None:
     """Resolve an opaque DB path to a URL the browser can fetch.
 
     Supabase paths are converted to time-limited signed URLs. Local paths
@@ -117,7 +135,7 @@ def resolve_url(stored_path: str | None) -> str | None:
         try:
             client = _supabase_client()
             result = client.storage.from_(bucket).create_signed_url(
-                key, SIGNED_URL_TTL_SECONDS
+                key, ttl_seconds
             )
             return result.get("signedURL") or result.get("signed_url")
         except Exception:
@@ -128,6 +146,86 @@ def resolve_url(stored_path: str | None) -> str | None:
         return f"/files/{rel}"
 
     return stored_path
+
+
+async def upload_image(
+    file: UploadFile,
+    *,
+    bucket: str,
+    user_id: int,
+    kind: str,
+    max_bytes: int,
+) -> StoredFile:
+    """Upload a profile image (avatar/cover) with server-side validation.
+
+    - Size capped at ``max_bytes``.
+    - Content-type restricted to JPEG/PNG/WebP.
+    - Image bytes are verified with Pillow to reject malformed/spoofed files.
+    - Filename pattern: ``{user_id}-{kind}-{timestamp}.{ext}``.
+    """
+    if file is None or file.filename is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="No file provided"
+        )
+
+    content_type = (file.content_type or "").lower()
+    if content_type not in ALLOWED_IMAGE_MIME:
+        raise HTTPException(
+            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+            detail="Only JPEG, PNG, or WebP images are allowed",
+        )
+
+    data = await file.read()
+    if not data:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Uploaded file is empty"
+        )
+    if len(data) > max_bytes:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail=f"Image too large (limit {max_bytes // (1024 * 1024)} MB)",
+        )
+
+    try:
+        from PIL import Image, UnidentifiedImageError  # lazy import
+    except ImportError:  # pragma: no cover - env guard
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Image validation unavailable (Pillow not installed)",
+        )
+
+    try:
+        with Image.open(io.BytesIO(data)) as img:
+            img.verify()
+    except (UnidentifiedImageError, Exception):  # noqa: BLE001
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="File is not a valid image",
+        )
+
+    ext = _IMAGE_EXT.get(content_type, "bin")
+    key = f"{user_id}-{kind}-{int(time.time())}.{ext}"
+
+    if _use_supabase():
+        try:
+            client = _supabase_client()
+            client.storage.from_(bucket).upload(
+                path=key,
+                file=data,
+                file_options={"content-type": content_type, "upsert": "true"},
+            )
+        except Exception as exc:  # pragma: no cover - depends on remote
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail=f"Supabase upload failed: {exc}",
+            ) from exc
+        return StoredFile(path=f"supabase://{bucket}/{key}", content_type=content_type)
+
+    rel = Path(bucket) / key
+    abs_path = LOCAL_ROOT / rel
+    abs_path.parent.mkdir(parents=True, exist_ok=True)
+    abs_path.write_bytes(data)
+    return StoredFile(path=f"local:{rel.as_posix()}", content_type=content_type)
 
 
 def local_file_path(rel: str) -> Path | None:

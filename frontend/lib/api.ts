@@ -42,6 +42,8 @@ export interface Note {
   created_at: string;
 }
 
+export type AssignmentType = 'file' | 'quiz';
+
 export interface Assignment {
   id: number;
   course_id: number;
@@ -51,9 +53,93 @@ export interface Assignment {
   max_marks: number;
   created_by: number | null;
   created_at: string;
+  type: AssignmentType;
   submitted: boolean | null;
   submission_id: number | null;
   marks: number | null;
+  attempt_id: number | null;
+  score: number | null;
+  max_score: number | null;
+}
+
+export interface QuizOptionFaculty {
+  id: number;
+  option_text: string;
+  is_correct: boolean;
+  position: number;
+}
+
+export interface QuizOptionStudent {
+  id: number;
+  option_text: string;
+  position: number;
+}
+
+export interface QuizQuestionFaculty {
+  id: number;
+  question_text: string;
+  position: number;
+  points: number;
+  options: QuizOptionFaculty[];
+}
+
+export interface QuizQuestionStudent {
+  id: number;
+  question_text: string;
+  position: number;
+  points: number;
+  options: QuizOptionStudent[];
+}
+
+export interface QuizAttemptStart {
+  attempt_id: number;
+  assignment_id: number;
+  started_at: string;
+  submitted_at: string | null;
+  max_score: number;
+  questions: QuizQuestionStudent[];
+}
+
+export interface QuizAttemptAnswer {
+  question_id: number;
+  selected_option_ids: number[];
+  correct_option_ids: number[];
+  is_correct: boolean;
+  points_earned: number;
+  points_max: number;
+}
+
+export interface QuizAttemptResult {
+  attempt_id: number;
+  assignment_id: number;
+  student_id: number;
+  score: number;
+  max_score: number;
+  submitted_at: string | null;
+  answers: QuizAttemptAnswer[];
+}
+
+export interface QuizAttemptSummary {
+  id: number;
+  assignment_id: number;
+  student_id: number;
+  student_name: string | null;
+  started_at: string;
+  submitted_at: string | null;
+  score: number | null;
+  max_score: number | null;
+}
+
+export interface QuizQuestionCreatePayload {
+  question_text: string;
+  position?: number;
+  points?: number;
+  options: { option_text: string; is_correct: boolean }[];
+}
+
+export interface QuizAnswerInPayload {
+  question_id: number;
+  option_ids: number[];
 }
 
 export type ProblemDifficulty = 'easy' | 'medium' | 'hard';
@@ -146,6 +232,42 @@ export interface FacultyProfile {
   qualifications: string | null;
   achievements: string | null;
   photo_url: string | null;
+}
+
+export interface ProfileLink {
+  label: string;
+  url: string;
+}
+
+export interface UserProfile {
+  user_id: number;
+  name: string;
+  email: string;
+  role: UserRole;
+  department_id: number | null;
+  department_name: string | null;
+  avatar_url: string | null;
+  cover_url: string | null;
+  bio: string | null;
+  headline: string | null;
+  links: ProfileLink[];
+  skills: string[];
+  designation: string | null;
+  qualifications: string | null;
+  achievements: string | null;
+  is_public: boolean;
+  updated_at: string | null;
+}
+
+export interface UserProfileUpdate {
+  bio?: string | null;
+  headline?: string | null;
+  links?: ProfileLink[];
+  skills?: string[];
+  designation?: string | null;
+  qualifications?: string | null;
+  achievements?: string | null;
+  is_public?: boolean;
 }
 
 export interface Submission {
@@ -335,6 +457,7 @@ export const assignments = {
       description?: string | null;
       due_date: string;
       max_marks?: number;
+      type?: AssignmentType;
     },
   ) =>
     apiFetch<Assignment>(`/courses/${courseId}/assignments`, {
@@ -373,6 +496,7 @@ export const assignments = {
       body: JSON.stringify(body),
     }),
   mySubmissions: () => apiFetch<Submission[]>('/submissions/mine'),
+  listMine: () => apiFetch<Assignment[]>('/assignments/mine'),
 };
 
 export const library = {
@@ -434,11 +558,19 @@ export const judge = {
     }),
   deleteProblem: (id: number) =>
     apiFetch<{ detail: string }>(`/judge/problems/${id}`, { method: 'DELETE' }),
+  run: (
+    problemId: number,
+    body: { language_id: number; source_code: string; stdin?: string | null },
+  ) =>
+    apiFetch<JudgeRunResult>(`/judge/problems/${problemId}/run`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
   submit: (
     problemId: number,
     body: { language_id: number; source_code: string; stdin?: string | null },
   ) =>
-    apiFetch<JudgeSubmission>(`/judge/problems/${problemId}/submit`, {
+    apiFetch<JudgeSubmitResult>(`/judge/problems/${problemId}/submit`, {
       method: 'POST',
       body: JSON.stringify(body),
     }),
@@ -463,6 +595,319 @@ export const notifications = {
     apiFetch<{ detail: string }>('/notifications/read-all', { method: 'POST' }),
 };
 
+export type CalendarEventType = 'assignment' | 'quiz';
+export type CalendarEventStatus =
+  | 'pending'
+  | 'submitted'
+  | 'graded'
+  | 'overdue';
+
+export interface CalendarEvent {
+  id: string;
+  type: CalendarEventType;
+  title: string;
+  course_id: number;
+  course_title: string;
+  due_date: string;
+  status: CalendarEventStatus;
+}
+
+export const calendar = {
+  list: (from: string, to: string) =>
+    apiFetch<CalendarEvent[]>(`/calendar?from=${from}&to=${to}`),
+};
+
+export type CodingLanguage = 'python' | 'c' | 'cpp' | 'java' | 'javascript';
+export type CodingScoringMode = 'all_or_nothing' | 'partial';
+export type CodingDifficulty = 'easy' | 'medium' | 'hard';
+export type CodingSubmissionStatus =
+  | 'pending'
+  | 'running'
+  | 'completed'
+  | 'error';
+
+export interface CodingTestCaseInput {
+  input: string;
+  expected_output: string;
+  is_hidden?: boolean;
+  weight?: number;
+  order_index?: number;
+}
+
+export interface CodingTestCaseFaculty {
+  id: number;
+  input: string;
+  expected_output: string;
+  is_hidden: boolean;
+  weight: number;
+  order_index: number;
+}
+
+export interface CodingTestCaseStudent {
+  id: number;
+  input: string | null;
+  expected_output: string | null;
+  is_hidden: boolean;
+  order_index: number;
+}
+
+export interface CodingAssessmentBrief {
+  id: number;
+  course_id: number | null;
+  course_title: string | null;
+  title: string;
+  allowed_languages: CodingLanguage[];
+  max_score: number;
+  scoring_mode: CodingScoringMode;
+  due_date: string | null;
+  max_attempts: number;
+  is_practice: boolean;
+  points: number;
+  difficulty: CodingDifficulty | null;
+  created_at: string;
+  attempts_used: number | null;
+  best_score: number | null;
+  solved: boolean | null;
+}
+
+export interface CodingAssessment {
+  id: number;
+  course_id: number | null;
+  created_by: number | null;
+  title: string;
+  description: string;
+  allowed_languages: CodingLanguage[];
+  time_limit_seconds: number;
+  memory_limit_mb: number;
+  max_score: number;
+  scoring_mode: CodingScoringMode;
+  due_date: string | null;
+  max_attempts: number;
+  is_practice: boolean;
+  points: number;
+  difficulty: CodingDifficulty | null;
+  created_at: string;
+  updated_at: string;
+  test_cases_faculty: CodingTestCaseFaculty[] | null;
+  test_cases_student: CodingTestCaseStudent[] | null;
+}
+
+export interface CodingTestCaseResult {
+  test_case_id: number;
+  passed: boolean;
+  stdout?: string | null;
+  stderr?: string | null;
+  time_ms?: number | null;
+  memory_kb?: number | null;
+  weight?: number;
+  is_hidden: boolean;
+}
+
+export interface CodingSubmission {
+  id: number;
+  assessment_id: number;
+  student_id: number;
+  student_name: string | null;
+  language: CodingLanguage;
+  source_code: string;
+  score: number;
+  status: CodingSubmissionStatus;
+  test_case_results: CodingTestCaseResult[] | null;
+  submitted_at: string;
+}
+
+export interface CodingAssessmentCreatePayload {
+  course_id?: number | null;
+  title: string;
+  description: string;
+  allowed_languages: CodingLanguage[];
+  time_limit_seconds?: number;
+  memory_limit_mb?: number;
+  max_score?: number;
+  scoring_mode?: CodingScoringMode;
+  due_date?: string | null;
+  max_attempts?: number;
+  is_practice?: boolean;
+  points?: number;
+  difficulty?: CodingDifficulty | null;
+  test_cases: CodingTestCaseInput[];
+}
+
+export interface PracticeStats {
+  total_points: number;
+  solved_count: number;
+}
+
+export interface CodingRunResult {
+  test_case_results: CodingTestCaseResult[];
+  passed: number;
+  total: number;
+}
+
+export interface JudgeTestCaseResult {
+  index: number;
+  is_hidden: boolean;
+  status: JudgeVerdict;
+  passed: boolean;
+  stdin: string | null;
+  expected_output: string | null;
+  actual_output: string | null;
+  stderr: string | null;
+  time_ms: number | null;
+  memory_kb: number | null;
+}
+
+export interface JudgeRunResult {
+  status: JudgeVerdict;
+  stdout: string | null;
+  stderr: string | null;
+  time_ms: number | null;
+  memory_kb: number | null;
+  passed: number;
+  total: number;
+  test_cases: JudgeTestCaseResult[];
+}
+
+export interface JudgeSubmitResult {
+  submission_id: number;
+  status: JudgeVerdict;
+  passed: number;
+  total: number;
+  time_ms: number | null;
+  memory_kb: number | null;
+  stdout: string | null;
+  stderr: string | null;
+  submitted_at: string;
+  test_cases: JudgeTestCaseResult[];
+}
+
+export const coding = {
+  listForCourse: (courseId: number) =>
+    apiFetch<CodingAssessmentBrief[]>(
+      `/api/coding-assessments/course/${courseId}`,
+    ),
+  listPractice: (opts?: { difficulty?: CodingDifficulty; language?: CodingLanguage }) => {
+    const params = new URLSearchParams();
+    if (opts?.difficulty) params.set('difficulty', opts.difficulty);
+    if (opts?.language) params.set('language', opts.language);
+    const qs = params.toString();
+    return apiFetch<CodingAssessmentBrief[]>(
+      `/api/coding-assessments/practice${qs ? `?${qs}` : ''}`,
+    );
+  },
+  listMine: (opts?: { isPractice?: boolean }) => {
+    const params = new URLSearchParams();
+    if (opts?.isPractice !== undefined)
+      params.set('is_practice', String(opts.isPractice));
+    const qs = params.toString();
+    return apiFetch<CodingAssessmentBrief[]>(
+      `/api/coding-assessments/mine${qs ? `?${qs}` : ''}`,
+    );
+  },
+  get: (id: number) =>
+    apiFetch<CodingAssessment>(`/api/coding-assessments/${id}`),
+  create: (body: CodingAssessmentCreatePayload) =>
+    apiFetch<CodingAssessment>('/api/coding-assessments', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+  update: (id: number, body: Partial<CodingAssessmentCreatePayload>) =>
+    apiFetch<CodingAssessment>(`/api/coding-assessments/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(body),
+    }),
+  remove: (id: number) =>
+    apiFetch<{ detail: string }>(`/api/coding-assessments/${id}`, {
+      method: 'DELETE',
+    }),
+  run: (id: number, body: { language: CodingLanguage; source_code: string }) =>
+    apiFetch<CodingRunResult>(`/api/coding-assessments/${id}/run`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+  submit: (id: number, body: { language: CodingLanguage; source_code: string }) =>
+    apiFetch<CodingSubmission>(`/api/coding-assessments/${id}/submit`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+  mySubmissions: (id: number) =>
+    apiFetch<CodingSubmission[]>(
+      `/api/coding-assessments/${id}/submissions/me`,
+    ),
+  allSubmissions: (id: number) =>
+    apiFetch<CodingSubmission[]>(`/api/coding-assessments/${id}/submissions`),
+  practiceStats: () =>
+    apiFetch<PracticeStats>('/api/coding-assessments/practice/stats'),
+};
+
+const CODING_LANGUAGE_LABELS: Record<CodingLanguage, string> = {
+  python: 'Python',
+  c: 'C',
+  cpp: 'C++',
+  java: 'Java',
+  javascript: 'JavaScript',
+};
+
+const CODING_LANGUAGE_MONACO: Record<CodingLanguage, string> = {
+  python: 'python',
+  c: 'c',
+  cpp: 'cpp',
+  java: 'java',
+  javascript: 'javascript',
+};
+
+export function codingLanguageLabel(l: CodingLanguage): string {
+  return CODING_LANGUAGE_LABELS[l];
+}
+
+export function codingLanguageMonaco(l: CodingLanguage): string {
+  return CODING_LANGUAGE_MONACO[l];
+}
+
+export const quiz = {
+  listQuestions: (assignmentId: number) =>
+    apiFetch<QuizQuestionFaculty[]>(
+      `/assignments/${assignmentId}/quiz/questions`,
+    ),
+  createQuestion: (assignmentId: number, body: QuizQuestionCreatePayload) =>
+    apiFetch<QuizQuestionFaculty>(
+      `/assignments/${assignmentId}/quiz/questions`,
+      { method: 'POST', body: JSON.stringify(body) },
+    ),
+  updateQuestion: (
+    assignmentId: number,
+    questionId: number,
+    body: Partial<QuizQuestionCreatePayload>,
+  ) =>
+    apiFetch<QuizQuestionFaculty>(
+      `/assignments/${assignmentId}/quiz/questions/${questionId}`,
+      { method: 'PATCH', body: JSON.stringify(body) },
+    ),
+  deleteQuestion: (assignmentId: number, questionId: number) =>
+    apiFetch<{ detail: string }>(
+      `/assignments/${assignmentId}/quiz/questions/${questionId}`,
+      { method: 'DELETE' },
+    ),
+  startAttempt: (assignmentId: number) =>
+    apiFetch<QuizAttemptStart>(
+      `/assignments/${assignmentId}/quiz/attempt`,
+      { method: 'POST', body: JSON.stringify({}) },
+    ),
+  submitAttempt: (
+    assignmentId: number,
+    attemptId: number,
+    answers: QuizAnswerInPayload[],
+  ) =>
+    apiFetch<QuizAttemptResult>(
+      `/assignments/${assignmentId}/quiz/attempt/${attemptId}/submit`,
+      { method: 'POST', body: JSON.stringify({ answers }) },
+    ),
+  listAttempts: (assignmentId: number) =>
+    apiFetch<QuizAttemptSummary[]>(
+      `/assignments/${assignmentId}/quiz/attempts`,
+    ),
+};
+
 export const LANGUAGES: { id: number; name: string; monaco: string }[] = [
   { id: 71, name: 'Python 3', monaco: 'python' },
   { id: 54, name: 'C++ (GCC 9)', monaco: 'cpp' },
@@ -483,6 +928,26 @@ export const ai = {
     fd.set('keep_pdf', data.keepPdf === false ? 'false' : 'true');
     fd.set('file', data.file);
     return apiUpload<Note>('/ai/generate-notes', fd);
+  },
+};
+
+export const profile = {
+  me: () => apiFetch<UserProfile>('/profile/me'),
+  get: (userId: number) => apiFetch<UserProfile>(`/profile/${userId}`),
+  update: (body: UserProfileUpdate) =>
+    apiFetch<UserProfile>('/profile/me', {
+      method: 'PATCH',
+      body: JSON.stringify(body),
+    }),
+  uploadAvatar: (file: File) => {
+    const fd = new FormData();
+    fd.set('file', file);
+    return apiUpload<UserProfile>('/profile/me/avatar', fd);
+  },
+  uploadCover: (file: File) => {
+    const fd = new FormData();
+    fd.set('file', file);
+    return apiUpload<UserProfile>('/profile/me/cover', fd);
   },
 };
 
@@ -511,23 +976,4 @@ export const college = {
     }),
   removeDepartment: (id: number) =>
     apiFetch<{ detail: string }>(`/college/departments/${id}`, { method: 'DELETE' }),
-  updateMyProfile: (data: {
-    designation?: string | null;
-    qualifications?: string | null;
-    achievements?: string | null;
-    department_id?: number | null;
-    photo?: File | null;
-  }) => {
-    const fd = new FormData();
-    if (data.designation !== undefined && data.designation !== null)
-      fd.set('designation', data.designation);
-    if (data.qualifications !== undefined && data.qualifications !== null)
-      fd.set('qualifications', data.qualifications);
-    if (data.achievements !== undefined && data.achievements !== null)
-      fd.set('achievements', data.achievements);
-    if (data.department_id !== undefined && data.department_id !== null)
-      fd.set('department_id', String(data.department_id));
-    if (data.photo) fd.set('photo', data.photo);
-    return apiUpload<FacultyProfile>('/college/faculty/me', fd, 'PUT');
-  },
 };

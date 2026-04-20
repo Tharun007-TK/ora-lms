@@ -1,8 +1,11 @@
+import { cookies } from 'next/headers';
+
 import type {
   CollegeInfo,
   Department,
   FacultyProfile,
   LibraryBook,
+  UserProfile,
 } from '@/lib/api';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
@@ -38,4 +41,32 @@ export function resolveServerFileUrl(url: string | null | undefined): string | n
   return url;
 }
 
-export type { CollegeInfo, Department, FacultyProfile, LibraryBook };
+async function authedServerFetch<T>(path: string): Promise<T | null> {
+  try {
+    const cookieStore = cookies();
+    const cookieHeader = cookieStore
+      .getAll()
+      .map((c) => `${c.name}=${c.value}`)
+      .join('; ');
+    const res = await fetch(`${API_URL}${path}`, {
+      cache: 'no-store',
+      headers: cookieHeader ? { cookie: cookieHeader } : undefined,
+    });
+    if (!res.ok) return null;
+    return (await res.json()) as T;
+  } catch {
+    return null;
+  }
+}
+
+export const profileServer = {
+  get: (userId: number) => authedServerFetch<UserProfile>(`/profile/${userId}`),
+};
+
+export type {
+  CollegeInfo,
+  Department,
+  FacultyProfile,
+  LibraryBook,
+  UserProfile,
+};

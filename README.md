@@ -56,7 +56,7 @@ Visit <http://localhost:3000>. Unauthenticated users land on `/login`. After log
 | backend | `GROQ_API_KEY` | AI Notes Maker |
 | backend | `OPENAI_API_KEY` | `text-embedding-3-small` for pgvector |
 | backend | `SUPABASE_URL` / `SUPABASE_SERVICE_KEY` | Signed URL file storage; dev falls back to local disk |
-| backend | `JUDGE0_BASE_URL` / `JUDGE0_API_KEY` | Public RapidAPI or self-hosted Judge0 CE |
+| backend | `JUDGE0_API_URL` | Free public Judge0 CE (`https://ce.judge0.com`). No auth. RapidAPI path deferred. |
 | backend | `REDIS_URL` | Pub/sub for notifications; graceful degrade when absent |
 
 ## Deploy

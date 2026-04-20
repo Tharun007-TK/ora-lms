@@ -1,6 +1,7 @@
 import Link from 'next/link';
 
 import {
+  Badge,
   Card,
   CardContent,
   CardDescription,
@@ -48,10 +49,17 @@ export function AssignmentCard({
     assignment.title
   );
 
+  const isQuiz = assignment.type === 'quiz';
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{Heading}</CardTitle>
+        <div className="flex items-start justify-between gap-2">
+          <CardTitle>{Heading}</CardTitle>
+          <Badge tone={isQuiz ? 'ember' : 'neutral'}>
+            {isQuiz ? 'Quiz' : 'File'}
+          </Badge>
+        </div>
         <CardDescription>
           {new Date(assignment.due_date).toLocaleString()} · {assignment.max_marks} marks
         </CardDescription>
@@ -69,12 +77,19 @@ export function AssignmentCard({
         >
           {formatCountdown(assignment.due_date)}
         </p>
-        {assignment.submitted && (
+        {!isQuiz && assignment.submitted && (
           <p className="t-caption text-[var(--ember)]">
             Submitted
             {assignment.marks != null
               ? ` · Graded ${assignment.marks}/${assignment.max_marks}`
               : ' · Awaiting grade'}
+          </p>
+        )}
+        {isQuiz && assignment.attempt_id != null && (
+          <p className="t-caption text-[var(--ember)]">
+            {assignment.submitted
+              ? `Submitted · ${assignment.score ?? 0}/${assignment.max_score ?? 0}`
+              : 'Attempt in progress'}
           </p>
         )}
       </CardContent>

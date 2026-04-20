@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
+import { Avatar } from '@/components/ora';
 import { collegeServer, resolveServerFileUrl } from '@/lib/server-api';
 
 export const revalidate = 3600;
@@ -66,20 +67,7 @@ export default async function DepartmentDetailPage({
                   className="group rounded-lg border bg-[var(--surface-raised)] p-5 transition-colors hover:border-primary"
                 >
                   <div className="flex items-center gap-4">
-                    <div className="h-16 w-16 overflow-hidden rounded-full bg-[var(--surface-sunken)]">
-                      {photo ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={photo}
-                          alt={f.name}
-                          className="h-full w-full object-cover"
-                        />
-                      ) : (
-                        <div className="flex h-full w-full items-center justify-center text-lg font-semibold text-[var(--text-secondary)]">
-                          {f.name.charAt(0)}
-                        </div>
-                      )}
-                    </div>
+                    <Avatar src={photo} fallback={f.name} size="lg" alt={f.name} />
                     <div>
                       <p className="font-semibold group-hover:text-[var(--ember)]">
                         {f.name}

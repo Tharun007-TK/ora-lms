@@ -1,0 +1,47 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - banner [ref=e3]:
+      - generic [ref=e4]:
+        - link "Ora MCET" [ref=e5] [cursor=pointer]:
+          - /url: /college
+          - generic [ref=e6]: Ora
+          - generic [ref=e7]: MCET
+        - navigation [ref=e8]:
+          - link "About" [ref=e9] [cursor=pointer]:
+            - /url: /college
+          - link "Sign in" [ref=e10] [cursor=pointer]:
+            - /url: /login
+    - main [ref=e11]:
+      - generic [ref=e12]:
+        - generic [ref=e13]:
+          - paragraph [ref=e14]: About MCET
+          - heading "Dr. Mahalingam College of Engineering and Technology" [level=1] [ref=e15]
+          - paragraph [ref=e16]: Established 2001 · Pollachi, Tamil Nadu
+          - paragraph [ref=e17]: Dr. Mahalingam College of Engineering and Technology (MCET) is an autonomous institution affiliated to Anna University, Chennai, located in Pollachi, Tamil Nadu.
+        - generic [ref=e18]:
+          - generic [ref=e19]:
+            - heading "Vision" [level=2] [ref=e20]
+            - paragraph [ref=e21]: To be a premier institution producing globally competent engineers and technologists.
+          - generic [ref=e22]:
+            - heading "Mission" [level=2] [ref=e23]
+            - paragraph [ref=e24]: To provide quality technical education through innovative teaching methods, research, and industry collaboration.
+        - generic [ref=e25]:
+          - heading "Departments" [level=2] [ref=e27]
+          - generic [ref=e28]:
+            - link "CSE Computer Science and Engineering Flagship department offering B.E./M.E. in CSE with electives in AI/ML, distributed systems, and cybersecurity." [ref=e29] [cursor=pointer]:
+              - /url: /college/departments/7
+              - generic [ref=e31]: CSE
+              - paragraph [ref=e32]: Computer Science and Engineering
+              - paragraph [ref=e33]: Flagship department offering B.E./M.E. in CSE with electives in AI/ML, distributed systems, and cybersecurity.
+            - link "ECE Electronics and Communication Engineering Department for analog/digital electronics, VLSI, signal processing, and wireless communication." [ref=e34] [cursor=pointer]:
+              - /url: /college/departments/8
+              - generic [ref=e36]: ECE
+              - paragraph [ref=e37]: Electronics and Communication Engineering
+              - paragraph [ref=e38]: Department for analog/digital electronics, VLSI, signal processing, and wireless communication.
+            - link "MECH Mechanical Engineering Thermal, design, and manufacturing tracks with a strong industry-integrated curriculum." [ref=e39] [cursor=pointer]:
+              - /url: /college/departments/9
+              - generic [ref=e41]: MECH
+              - paragraph [ref=e42]: Mechanical Engineering
+              - paragraph [ref=e43]: Thermal, design, and manufacturing tracks with a strong industry-integrated curriculum.
+    - contentinfo [ref=e44]: © 2026 Dr. Mahalingam College of Engineering and Technology, Pollachi.
+  - alert [ref=e45]

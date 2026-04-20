@@ -38,12 +38,14 @@ services:
         sync: false
       - key: SUPABASE_ANON_KEY
         sync: false
-      - key: JUDGE0_BASE_URL
-        value: https://judge0-ce.p.rapidapi.com
-      - key: JUDGE0_API_KEY
-        sync: false
-      - key: JUDGE0_HOST_HEADER
-        value: judge0-ce.p.rapidapi.com
+      # Judge0 — public instance, no auth required.
+      # TODO: re-enable for RapidAPI prod (JUDGE0_RAPIDAPI_KEY, JUDGE0_RAPIDAPI_HOST).
+      - key: JUDGE0_API_URL
+        value: https://ce.judge0.com
+      - key: JUDGE0_WAIT
+        value: "false"
+      - key: JUDGE0_TIMEOUT_SECONDS
+        value: "10"
       - key: REDIS_URL
         fromService:
           type: redis

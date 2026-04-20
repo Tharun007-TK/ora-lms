@@ -49,11 +49,16 @@ class Settings(BaseSettings):
     SUPABASE_BUCKET_NOTES: str = Field(default="notes")
     SUPABASE_BUCKET_LIBRARY: str = Field(default="library")
     SUPABASE_BUCKET_SUBMISSIONS: str = Field(default="submissions")
+    SUPABASE_BUCKET_AVATARS: str = Field(default="avatars")
 
-    # Judge0
-    JUDGE0_BASE_URL: str = Field(default="https://judge0-ce.p.rapidapi.com")
-    JUDGE0_API_KEY: str = Field(default="")
-    JUDGE0_HOST_HEADER: str = Field(default="judge0-ce.p.rapidapi.com")
+    # Judge0 — using free public instance, no auth required.
+    # TODO: re-enable for RapidAPI prod (JUDGE0_RAPIDAPI_KEY, JUDGE0_RAPIDAPI_HOST)
+    JUDGE0_API_URL: str = Field(default="https://ce.judge0.com")
+    JUDGE0_WAIT: bool = Field(default=False)
+    JUDGE0_TIMEOUT_SECONDS: int = Field(default=10)
+    JUDGE0_MOCK: bool = Field(default=False)
+    # TODO: re-enable for RapidAPI prod
+    # JUDGE0_AUTH_TOKEN: str = Field(default="")
 
     # Redis
     REDIS_URL: str = Field(default="redis://localhost:6379/0")

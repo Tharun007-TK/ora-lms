@@ -15,6 +15,7 @@ from sqlalchemy import (
     UniqueConstraint,
     func,
 )
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from core.database import Base
@@ -27,6 +28,29 @@ class UserRole(str, enum.Enum):
 
 
 class ProblemDifficulty(str, enum.Enum):
+    easy = "easy"
+    medium = "medium"
+    hard = "hard"
+
+
+class AssignmentType(str, enum.Enum):
+    file = "file"
+    quiz = "quiz"
+
+
+class CodingScoringMode(str, enum.Enum):
+    all_or_nothing = "all_or_nothing"
+    partial = "partial"
+
+
+class CodingSubmissionStatus(str, enum.Enum):
+    pending = "pending"
+    running = "running"
+    completed = "completed"
+    error = "error"
+
+
+class CodingDifficulty(str, enum.Enum):
     easy = "easy"
     medium = "medium"
     hard = "hard"
@@ -45,7 +69,6 @@ class Department(Base):
 
     users: Mapped[list["User"]] = relationship(back_populates="department")
     courses: Mapped[list["Course"]] = relationship(back_populates="department")
-    faculty_profiles: Mapped[list["FacultyProfile"]] = relationship(back_populates="department")
 
 
 class User(Base):
@@ -67,7 +90,7 @@ class User(Base):
     )
 
     department: Mapped[Department | None] = relationship(back_populates="users")
-    faculty_profile: Mapped["FacultyProfile | None"] = relationship(
+    profile: Mapped["UserProfile | None"] = relationship(
         back_populates="user", uselist=False, cascade="all, delete-orphan"
     )
     taught_courses: Mapped[list["Course"]] = relationship(
@@ -190,9 +213,23 @@ class Assignment(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
+    type: Mapped[AssignmentType] = mapped_column(
+        SAEnum(AssignmentType, name="assignment_type"),
+        nullable=False,
+        default=AssignmentType.file,
+        server_default=AssignmentType.file.value,
+    )
 
     course: Mapped[Course] = relationship(back_populates="assignments")
     submissions: Mapped[list["Submission"]] = relationship(
+        back_populates="assignment", cascade="all, delete-orphan"
+    )
+    quiz_questions: Mapped[list["QuizQuestion"]] = relationship(
+        back_populates="assignment",
+        cascade="all, delete-orphan",
+        order_by="QuizQuestion.position",
+    )
+    quiz_attempts: Mapped[list["QuizAttempt"]] = relationship(
         back_populates="assignment", cascade="all, delete-orphan"
     )
 
@@ -272,23 +309,133 @@ class CollegeInfo(Base):
     )
 
 
-class FacultyProfile(Base):
-    __tablename__ = "faculty_profiles"
+class UserProfile(Base):
+    __tablename__ = "user_profiles"
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
     user_id: Mapped[int] = mapped_column(
-        ForeignKey("users.id", ondelete="CASCADE"), nullable=False, unique=True
+        ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    avatar_url: Mapped[str | None] = mapped_column(String(1024))
+    cover_url: Mapped[str | None] = mapped_column(String(1024))
+    bio: Mapped[str | None] = mapped_column(Text)
+    headline: Mapped[str | None] = mapped_column(String(200))
+    links: Mapped[list] = mapped_column(
+        JSONB, nullable=False, server_default="[]"
+    )
+    skills: Mapped[list] = mapped_column(
+        JSONB, nullable=False, server_default="[]"
     )
     designation: Mapped[str | None] = mapped_column(String(200))
     qualifications: Mapped[str | None] = mapped_column(Text)
     achievements: Mapped[str | None] = mapped_column(Text)
-    photo_url: Mapped[str | None] = mapped_column(String(1024))
-    department_id: Mapped[int | None] = mapped_column(
-        ForeignKey("departments.id", ondelete="SET NULL"), index=True
+    is_public: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default="false", default=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
     )
 
-    user: Mapped[User] = relationship(back_populates="faculty_profile")
-    department: Mapped[Department | None] = relationship(back_populates="faculty_profiles")
+    user: Mapped[User] = relationship(back_populates="profile")
+
+
+# ---------- Quiz (Day 11) ----------
+
+
+class QuizQuestion(Base):
+    __tablename__ = "quiz_questions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    assignment_id: Mapped[int] = mapped_column(
+        ForeignKey("assignments.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    question_text: Mapped[str] = mapped_column(Text, nullable=False)
+    position: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    points: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    assignment: Mapped[Assignment] = relationship(back_populates="quiz_questions")
+    options: Mapped[list["QuizOption"]] = relationship(
+        back_populates="question",
+        cascade="all, delete-orphan",
+        order_by="QuizOption.position",
+    )
+
+
+class QuizOption(Base):
+    __tablename__ = "quiz_options"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    question_id: Mapped[int] = mapped_column(
+        ForeignKey("quiz_questions.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    option_text: Mapped[str] = mapped_column(Text, nullable=False)
+    is_correct: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    position: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+
+    question: Mapped[QuizQuestion] = relationship(back_populates="options")
+
+
+class QuizAttempt(Base):
+    __tablename__ = "quiz_attempts"
+    __table_args__ = (
+        UniqueConstraint(
+            "assignment_id", "student_id", name="uq_quiz_attempt_assignment_student"
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    assignment_id: Mapped[int] = mapped_column(
+        ForeignKey("assignments.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    student_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    started_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    submitted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    score: Mapped[int | None] = mapped_column(Integer)
+    max_score: Mapped[int | None] = mapped_column(Integer)
+
+    assignment: Mapped[Assignment] = relationship(back_populates="quiz_attempts")
+    answers: Mapped[list["QuizAnswer"]] = relationship(
+        back_populates="attempt", cascade="all, delete-orphan"
+    )
+
+
+class QuizAnswer(Base):
+    __tablename__ = "quiz_answers"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    attempt_id: Mapped[int] = mapped_column(
+        ForeignKey("quiz_attempts.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    question_id: Mapped[int] = mapped_column(
+        ForeignKey("quiz_questions.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    selected_option_id: Mapped[int] = mapped_column(
+        ForeignKey("quiz_options.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    is_correct: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+
+    attempt: Mapped[QuizAttempt] = relationship(back_populates="answers")
 
 
 # ---------- Judge ----------
@@ -358,9 +505,156 @@ class CodingTestcase(Base):
     problem: Mapped[JudgeProblem] = relationship(back_populates="testcases")
 
 
+# ---------- Coding Assessments (UPDATE.md) ----------
+
+
+class CodingAssessment(Base):
+    __tablename__ = "coding_assessments"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    course_id: Mapped[int | None] = mapped_column(
+        ForeignKey("courses.id", ondelete="CASCADE"), index=True
+    )
+    created_by: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL")
+    )
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    description: Mapped[str] = mapped_column(Text, nullable=False)
+    allowed_languages: Mapped[list[str]] = mapped_column(
+        JSONB, nullable=False, default=list
+    )
+    time_limit_seconds: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=2
+    )
+    memory_limit_mb: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=256
+    )
+    max_score: Mapped[int] = mapped_column(Integer, nullable=False, default=100)
+    scoring_mode: Mapped[CodingScoringMode] = mapped_column(
+        SAEnum(CodingScoringMode, name="coding_scoring_mode"), nullable=False
+    )
+    due_date: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    max_attempts: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=3
+    )
+    is_practice: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, index=True
+    )
+    points: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    difficulty: Mapped[CodingDifficulty | None] = mapped_column(
+        SAEnum(CodingDifficulty, name="coding_difficulty"), index=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
+
+    test_cases: Mapped[list["CodingTestCase"]] = relationship(
+        back_populates="assessment",
+        cascade="all, delete-orphan",
+        order_by="CodingTestCase.order_index",
+    )
+    submissions: Mapped[list["CodingSubmission"]] = relationship(
+        back_populates="assessment", cascade="all, delete-orphan"
+    )
+
+
+class CodingTestCase(Base):
+    __tablename__ = "coding_test_cases"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    assessment_id: Mapped[int] = mapped_column(
+        ForeignKey("coding_assessments.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    input: Mapped[str] = mapped_column(Text, nullable=False)
+    expected_output: Mapped[str] = mapped_column(Text, nullable=False)
+    is_hidden: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False
+    )
+    weight: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    order_index: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0
+    )
+
+    assessment: Mapped[CodingAssessment] = relationship(back_populates="test_cases")
+
+
+class CodingSubmission(Base):
+    __tablename__ = "coding_submissions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    assessment_id: Mapped[int] = mapped_column(
+        ForeignKey("coding_assessments.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    student_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    language: Mapped[str] = mapped_column(String(30), nullable=False)
+    source_code: Mapped[str] = mapped_column(Text, nullable=False)
+    score: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    status: Mapped[CodingSubmissionStatus] = mapped_column(
+        SAEnum(CodingSubmissionStatus, name="coding_submission_status"),
+        nullable=False,
+    )
+    test_case_results: Mapped[list | None] = mapped_column(JSONB)
+    submitted_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    assessment: Mapped[CodingAssessment] = relationship(back_populates="submissions")
+
+
+class PracticeProgress(Base):
+    __tablename__ = "practice_progress"
+    __table_args__ = (
+        UniqueConstraint(
+            "student_id",
+            "assessment_id",
+            name="uq_practice_progress_student_assessment",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    student_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    assessment_id: Mapped[int] = mapped_column(
+        ForeignKey("coding_assessments.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    points_earned: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0
+    )
+    solved_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+
 __all__ = [
     "UserRole",
     "ProblemDifficulty",
+    "AssignmentType",
+    "CodingScoringMode",
+    "CodingSubmissionStatus",
+    "CodingDifficulty",
+    "CodingAssessment",
+    "CodingTestCase",
+    "CodingSubmission",
+    "PracticeProgress",
     "Department",
     "User",
     "Course",
@@ -372,7 +666,11 @@ __all__ = [
     "LibraryBook",
     "Notification",
     "CollegeInfo",
-    "FacultyProfile",
+    "UserProfile",
+    "QuizQuestion",
+    "QuizOption",
+    "QuizAttempt",
+    "QuizAnswer",
     "JudgeProblem",
     "JudgeSubmission",
     "CodingTestcase",

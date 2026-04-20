@@ -20,8 +20,11 @@ from schemas.requests import (
     JudgeProblemCreate,
     JudgeProblemOut,
     JudgeProblemUpdate,
+    JudgeRunResult,
     JudgeSubmissionOut,
     JudgeSubmitRequest,
+    JudgeSubmitResult,
+    JudgeTestCaseResult,
     MessageResponse,
 )
 from services import judge_service, notification_service
@@ -205,9 +208,76 @@ async def delete_problem(
 # ---------- Submissions ----------
 
 
+@router.post("/problems/{problem_id}/run", response_model=JudgeRunResult)
+async def run_code(
+    problem_id: int,
+    body: JudgeSubmitRequest,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> JudgeRunResult:
+    """Compile + run against VISIBLE test cases only. No persist."""
+    if user.role != UserRole.student:
+        raise HTTPException(status_code=403, detail="Only students can run code")
+
+    problem = await _load_problem(db, problem_id)
+    visible_tcs = [tc for tc in problem.testcases if not tc.is_hidden]
+    if not visible_tcs:
+        raise HTTPException(
+            status_code=400,
+            detail="No visible test cases to run against",
+        )
+
+    testcases = [(tc.input, tc.expected_output) for tc in visible_tcs]
+    verdicts = await judge_service.judge_each_testcase(
+        source_code=body.source_code,
+        language_id=body.language_id,
+        testcases=testcases,
+    )
+
+    per_tc: list[JudgeTestCaseResult] = []
+    for idx, (tc, v) in enumerate(zip(visible_tcs, verdicts)):
+        per_tc.append(
+            JudgeTestCaseResult(
+                index=idx,
+                is_hidden=False,
+                status=v.status,
+                passed=v.status == "AC",
+                stdin=tc.input,
+                expected_output=tc.expected_output,
+                actual_output=v.stdout,
+                stderr=v.stderr,
+                time_ms=v.time_ms,
+                memory_kb=v.memory_kb,
+            )
+        )
+
+    passed_count = sum(1 for r in per_tc if r.passed)
+    # Aggregated status: AC if all pass, else first failure verdict
+    agg_status = "AC"
+    first_fail = next((r for r in per_tc if not r.passed), None)
+    if first_fail:
+        agg_status = first_fail.status
+    max_time = max((r.time_ms for r in per_tc if r.time_ms is not None), default=None)
+    max_mem = max(
+        (r.memory_kb for r in per_tc if r.memory_kb is not None), default=None
+    )
+    first_stderr = next((r.stderr for r in per_tc if r.stderr), None)
+
+    return JudgeRunResult(
+        status=agg_status,
+        stdout=None,
+        stderr=first_stderr,
+        time_ms=max_time,
+        memory_kb=max_mem,
+        passed=passed_count,
+        total=len(visible_tcs),
+        test_cases=per_tc,
+    )
+
+
 @router.post(
     "/problems/{problem_id}/submit",
-    response_model=JudgeSubmissionOut,
+    response_model=JudgeSubmitResult,
     status_code=status.HTTP_201_CREATED,
 )
 async def submit_code(
@@ -216,49 +286,88 @@ async def submit_code(
     background: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
-) -> JudgeSubmissionOut:
+) -> JudgeSubmitResult:
     if user.role != UserRole.student:
         raise HTTPException(
             status_code=403, detail="Only students can submit code"
         )
 
     problem = await _load_problem(db, problem_id)
-    testcases = [(tc.input, tc.expected_output) for tc in problem.testcases]
-    if not testcases:
+    if not problem.testcases:
         raise HTTPException(
             status_code=400, detail="Problem has no testcases configured"
         )
 
-    verdict = await judge_service.judge_against_testcases(
+    tcs = list(problem.testcases)
+    inputs = [(tc.input, tc.expected_output) for tc in tcs]
+    verdicts = await judge_service.judge_each_testcase(
         source_code=body.source_code,
         language_id=body.language_id,
-        testcases=testcases,
+        testcases=inputs,
     )
+
+    per_tc: list[JudgeTestCaseResult] = []
+    for idx, (tc, v) in enumerate(zip(tcs, verdicts)):
+        per_tc.append(
+            JudgeTestCaseResult(
+                index=idx,
+                is_hidden=tc.is_hidden,
+                status=v.status,
+                passed=v.status == "AC",
+                stdin=None if tc.is_hidden else tc.input,
+                expected_output=None if tc.is_hidden else tc.expected_output,
+                actual_output=None if tc.is_hidden else v.stdout,
+                stderr=v.stderr,
+                time_ms=v.time_ms,
+                memory_kb=v.memory_kb,
+            )
+        )
+
+    passed = sum(1 for r in per_tc if r.passed)
+    total = len(per_tc)
+    agg_status = "AC" if passed == total else next(
+        (r.status for r in per_tc if not r.passed), "WA"
+    )
+    max_time = max((r.time_ms for r in per_tc if r.time_ms is not None), default=None)
+    max_mem = max(
+        (r.memory_kb for r in per_tc if r.memory_kb is not None), default=None
+    )
+    first_stderr = next((r.stderr for r in per_tc if r.stderr), None)
 
     submission = JudgeSubmission(
         problem_id=problem.id,
         student_id=user.id,
         language_id=body.language_id,
         source_code=body.source_code,
-        status=verdict.status,
-        stdout=verdict.stdout,
-        stderr=verdict.stderr,
-        time_ms=verdict.time_ms,
-        memory_kb=verdict.memory_kb,
+        status=agg_status,
+        stdout=None,
+        stderr=first_stderr,
+        time_ms=max_time,
+        memory_kb=max_mem,
     )
     db.add(submission)
     await db.commit()
     await db.refresh(submission)
 
-    # Fire-and-forget student notification for the verdict.
     background.add_task(
         _notify_verdict,
         student_id=user.id,
         problem_title=problem.title,
-        verdict=verdict.status,
+        verdict=agg_status,
     )
 
-    return JudgeSubmissionOut.model_validate(submission)
+    return JudgeSubmitResult(
+        submission_id=submission.id,
+        status=agg_status,
+        passed=passed,
+        total=total,
+        time_ms=max_time,
+        memory_kb=max_mem,
+        stdout=None,
+        stderr=first_stderr,
+        submitted_at=submission.submitted_at,
+        test_cases=per_tc,
+    )
 
 
 async def _notify_verdict(

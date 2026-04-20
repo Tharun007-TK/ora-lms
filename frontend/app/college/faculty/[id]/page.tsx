@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
+import { Avatar } from '@/components/ora';
 import { collegeServer, resolveServerFileUrl } from '@/lib/server-api';
 
 export const revalidate = 3600;
@@ -41,20 +42,14 @@ export default async function FacultyDetailPage({
       </div>
 
       <header className="flex flex-col gap-6 sm:flex-row sm:items-start">
-        <div className="h-40 w-40 shrink-0 overflow-hidden rounded-lg border bg-[var(--surface-sunken)]">
-          {photo ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={photo}
-              alt={profile.name}
-              className="h-full w-full object-cover"
-            />
-          ) : (
-            <div className="flex h-full w-full items-center justify-center text-5xl font-semibold text-[var(--text-secondary)]">
-              {profile.name.charAt(0)}
-            </div>
-          )}
-        </div>
+        <Avatar
+          src={photo}
+          fallback={profile.name}
+          size="xl"
+          shape="square"
+          alt={profile.name}
+          className="h-40 w-40"
+        />
         <div className="space-y-2">
           <h1 className="text-3xl font-semibold">{profile.name}</h1>
           {profile.designation && (
