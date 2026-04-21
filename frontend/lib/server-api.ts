@@ -43,7 +43,7 @@ export function resolveServerFileUrl(url: string | null | undefined): string | n
 
 async function authedServerFetch<T>(path: string): Promise<T | null> {
   try {
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     const cookieHeader = cookieStore
       .getAll()
       .map((c) => `${c.name}=${c.value}`)

@@ -79,13 +79,13 @@ export default function FacultyCourseDetailPage() {
           </CardHeader>
           <CardContent className="flex flex-col gap-2">
             <Button asChild variant="secondary">
-              <Link href={`/faculty/courses/${course.id}/assignments`}>
-                Manage assignments
+              <Link href="/faculty/assessments">
+                Go to Assessments
               </Link>
             </Button>
             <Button asChild size="sm">
-              <Link href={`/faculty/courses/${course.id}/assignments/new`}>
-                New assignment
+              <Link href="/faculty/assessments/new">
+                New assessment
               </Link>
             </Button>
           </CardContent>
@@ -95,13 +95,24 @@ export default function FacultyCourseDetailPage() {
             <CardTitle>Enrolled students</CardTitle>
             <CardDescription>{students.length} students</CardDescription>
           </CardHeader>
-          <CardContent className="text-sm text-[var(--text-secondary)]">
-            {students.length === 0
-              ? 'No students enrolled yet.'
-              : students
-                  .slice(0, 4)
-                  .map((s) => s.name)
-                  .join(', ') + (students.length > 4 ? ', …' : '')}
+          <CardContent className="space-y-1">
+            {students.length === 0 ? (
+              <p className="text-sm text-[var(--text-secondary)]">No students enrolled yet.</p>
+            ) : (
+              <>
+                <div className="flex flex-wrap gap-x-3 gap-y-1">
+                  {students.map((s) => (
+                    <Link
+                      key={s.id}
+                      href={`/u/${s.id}`}
+                      className="text-sm text-[var(--ember)] hover:underline"
+                    >
+                      {s.name}
+                    </Link>
+                  ))}
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
       </div>

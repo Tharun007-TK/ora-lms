@@ -10,9 +10,10 @@ export const revalidate = 0;
 export default async function PublicProfilePage({
   params,
 }: {
-  params: { user_id: string };
+  params: Promise<{ user_id: string }>;
 }) {
-  const id = Number(params.user_id);
+  const { user_id } = await params;
+  const id = Number(user_id);
   if (!Number.isFinite(id)) notFound();
 
   const profile = await profileServer.get(id);

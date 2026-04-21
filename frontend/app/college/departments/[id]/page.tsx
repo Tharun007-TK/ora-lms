@@ -16,9 +16,10 @@ export async function generateStaticParams() {
 export default async function DepartmentDetailPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
-  const id = Number(params.id);
+  const { id: rawId } = await params;
+  const id = Number(rawId);
   if (!Number.isFinite(id)) notFound();
 
   const [dept, faculty] = await Promise.all([

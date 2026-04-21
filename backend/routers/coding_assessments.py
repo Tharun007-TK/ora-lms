@@ -29,6 +29,7 @@ from schemas.requests import (
     CodingAssessmentCreate,
     CodingAssessmentOut,
     CodingAssessmentUpdate,
+    CodingLeaderboardEntry,
     CodingRunResult,
     CodingSubmissionOut,
     CodingSubmitBody,
@@ -685,4 +686,49 @@ async def list_all_submissions(
             submitted_at=s.submitted_at,
         )
         for s, name in rows
+    ]
+
+
+@router.get(
+    "/{assessment_id}/leaderboard",
+    response_model=list[CodingLeaderboardEntry],
+)
+async def coding_leaderboard(
+    assessment_id: int,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_faculty_or_admin),
+) -> list[CodingLeaderboardEntry]:
+    a = await _get_assessment_or_404(db, assessment_id)
+    await _faculty_owns_or_403(db, a, user)
+
+    r = await db.execute(
+        select(
+            CodingSubmission.student_id,
+            func.max(CodingSubmission.score).label("best_score"),
+            func.count(CodingSubmission.id).label("submissions"),
+            func.max(CodingSubmission.submitted_at).label("last_submitted_at"),
+        )
+        .where(CodingSubmission.assessment_id == assessment_id)
+        .group_by(CodingSubmission.student_id)
+        .order_by(func.max(CodingSubmission.score).desc())
+    )
+    rows = r.all()
+    if not rows:
+        return []
+
+    student_ids = [row[0] for row in rows]
+    ur = await db.execute(select(User).where(User.id.in_(student_ids)))
+    names = {u.id: u.name for u in ur.scalars().all()}
+
+    return [
+        CodingLeaderboardEntry(
+            rank=i + 1,
+            student_id=row[0],
+            student_name=names.get(row[0]),
+            best_score=row[1] or 0,
+            max_score=a.max_score,
+            submissions=row[2],
+            last_submitted_at=row[3],
+        )
+        for i, row in enumerate(rows)
     ]

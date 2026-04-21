@@ -97,6 +97,8 @@ export interface QuizAttemptStart {
   started_at: string;
   submitted_at: string | null;
   max_score: number;
+  score: number | null;
+  correct_count: number | null;
   questions: QuizQuestionStudent[];
 }
 
@@ -128,6 +130,22 @@ export interface QuizAttemptSummary {
   submitted_at: string | null;
   score: number | null;
   max_score: number | null;
+}
+
+export interface AssignmentStatsEntry {
+  assignment_id: number;
+  completed: number;
+  total_enrolled: number;
+}
+
+export interface CodingLeaderboardEntry {
+  rank: number;
+  student_id: number;
+  student_name: string | null;
+  best_score: number;
+  max_score: number;
+  submissions: number;
+  last_submitted_at: string;
 }
 
 export interface QuizQuestionCreatePayload {
@@ -524,6 +542,8 @@ export const assignments = {
     }),
   mySubmissions: () => apiFetch<Submission[]>('/submissions/mine'),
   listMine: () => apiFetch<Assignment[]>('/my-assignments'),
+  stats: (courseId: number) =>
+    apiFetch<AssignmentStatsEntry[]>(`/courses/${courseId}/assignments/stats`),
 };
 
 export const library = {
@@ -642,6 +662,47 @@ export interface CalendarEvent {
 export const calendar = {
   list: (from: string, to: string) =>
     apiFetch<CalendarEvent[]>(`/calendar?from=${from}&to=${to}`),
+};
+
+export interface CalendarCustomEvent {
+  id: number;
+  user_id: number;
+  title: string;
+  description: string | null;
+  event_date: string;
+  reminder_minutes: number | null;
+  reminder_sent: boolean;
+  created_at: string;
+}
+
+export const calendarEvents = {
+  list: (from: string, to: string) =>
+    apiFetch<CalendarCustomEvent[]>(`/calendar/events?from=${from}&to=${to}`),
+  create: (body: {
+    title: string;
+    description?: string | null;
+    event_date: string;
+    reminder_minutes?: number | null;
+  }) =>
+    apiFetch<CalendarCustomEvent>('/calendar/events', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+  update: (
+    id: number,
+    body: Partial<{
+      title: string;
+      description: string | null;
+      event_date: string;
+      reminder_minutes: number | null;
+    }>,
+  ) =>
+    apiFetch<CalendarCustomEvent>(`/calendar/events/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(body),
+    }),
+  remove: (id: number) =>
+    apiFetch<void>(`/calendar/events/${id}`, { method: 'DELETE' }),
 };
 
 export type CodingLanguage = 'python' | 'c' | 'cpp' | 'java' | 'javascript';
@@ -863,6 +924,8 @@ export const coding = {
     ),
   allSubmissions: (id: number) =>
     apiFetch<CodingSubmission[]>(`/api/coding-assessments/${id}/submissions`),
+  leaderboard: (id: number) =>
+    apiFetch<CodingLeaderboardEntry[]>(`/api/coding-assessments/${id}/leaderboard`),
   practiceStats: () =>
     apiFetch<PracticeStats>('/api/coding-assessments/practice/stats'),
 };

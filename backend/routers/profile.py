@@ -8,7 +8,7 @@ from sqlalchemy.orm import selectinload
 from core.auth import get_current_user
 from core.config import settings
 from core.database import get_db
-from models.tables import Department, User, UserProfile, UserRole
+from models.tables import Course, Department, Enrollment, User, UserProfile, UserRole
 from schemas.requests import UserProfileOut, UserProfileUpdate
 from services import storage_service
 
@@ -180,7 +180,21 @@ async def get_public_profile(
 
     is_owner = viewer.id == user.id
     is_admin = viewer.role == UserRole.admin
-    if not (is_owner or is_admin or profile.is_public):
+
+    is_enrolled_faculty = False
+    if viewer.role == UserRole.faculty and not is_owner:
+        er = await db.execute(
+            select(Enrollment.id)
+            .join(Course, Course.id == Enrollment.course_id)
+            .where(
+                Course.faculty_id == viewer.id,
+                Enrollment.student_id == user_id,
+            )
+            .limit(1)
+        )
+        is_enrolled_faculty = er.scalar_one_or_none() is not None
+
+    if not (is_owner or is_admin or profile.is_public or is_enrolled_faculty):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="This profile is private",

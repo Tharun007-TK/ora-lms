@@ -165,10 +165,10 @@ export default function QuizEditPage() {
     <div className="space-y-6">
       <header className="space-y-2">
         <Link
-          href={`/faculty/courses/${courseId}/assignments`}
+          href="/faculty/assessments"
           className="text-xs text-[var(--text-secondary)] hover:underline"
         >
-          ← Back to assignments
+          ← Back to assessments
         </Link>
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-semibold">Quiz: {title}</h1>

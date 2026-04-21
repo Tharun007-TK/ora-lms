@@ -16,9 +16,10 @@ export async function generateStaticParams() {
 export default async function FacultyDetailPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
-  const id = Number(params.id);
+  const { id: rawId } = await params;
+  const id = Number(rawId);
   if (!Number.isFinite(id)) notFound();
 
   const profile = await collegeServer.facultyOne(id);

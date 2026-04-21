@@ -103,8 +103,8 @@ export default function StudentCourseDetailPage() {
           </CardHeader>
           <CardContent>
             <Button asChild variant="secondary">
-              <Link href={`/student/courses/${course.id}/assignments`}>
-                Open assignments
+              <Link href="/student/assignments">
+                Go to Assignments
               </Link>
             </Button>
           </CardContent>

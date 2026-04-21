@@ -18,6 +18,7 @@ import {
   assignments,
   coding,
   type Assignment,
+  type AssignmentStatsEntry,
   type CodingAssessmentBrief,
   type CodingDifficulty,
 } from '@/lib/api';
@@ -33,6 +34,7 @@ export default function FacultyAssignmentsPage() {
   const courseId = Number(params.id);
   const [items, setItems] = useState<Assignment[]>([]);
   const [codingItems, setCodingItems] = useState<CodingAssessmentBrief[]>([]);
+  const [statsMap, setStatsMap] = useState<Record<number, AssignmentStatsEntry>>({});
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -42,17 +44,19 @@ export default function FacultyAssignmentsPage() {
     Promise.all([
       assignments.list(courseId),
       coding.listForCourse(courseId).catch(() => [] as CodingAssessmentBrief[]),
+      assignments.stats(courseId).catch(() => [] as AssignmentStatsEntry[]),
     ])
-      .then(([a, c]) => {
+      .then(([a, c, s]) => {
         if (!cancelled) {
           setItems(a);
           setCodingItems(c);
+          const map: Record<number, AssignmentStatsEntry> = {};
+          for (const entry of s) map[entry.assignment_id] = entry;
+          setStatsMap(map);
         }
       })
       .catch((err) => {
-        if (!cancelled) {
-          setError(err instanceof Error ? err.message : 'Failed to load');
-        }
+        if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load');
       })
       .finally(() => !cancelled && setLoading(false));
     return () => {
@@ -73,8 +77,8 @@ export default function FacultyAssignmentsPage() {
           <h1 className="mt-1 text-2xl font-semibold">Assignments</h1>
         </div>
         <Button asChild size="sm">
-          <Link href={`/faculty/courses/${courseId}/assignments/new`}>
-            New assignment
+          <Link href="/faculty/assessments/new">
+            New assessment
           </Link>
         </Button>
       </header>
@@ -84,11 +88,10 @@ export default function FacultyAssignmentsPage() {
       ) : error ? (
         <p className="text-sm text-[var(--danger-fg)]">{error}</p>
       ) : items.length === 0 && codingItems.length === 0 ? (
-        <p className="text-sm text-[var(--text-secondary)]">
-          No assignments created yet.
-        </p>
+        <p className="text-sm text-[var(--text-secondary)]">No assignments created yet.</p>
       ) : (
         <div className="space-y-6">
+          {/* Coding assessments */}
           {codingItems.length > 0 && (
             <section className="space-y-3">
               <h2 className="t-caption font-semibold uppercase tracking-wide text-[var(--ember)]">
@@ -108,16 +111,21 @@ export default function FacultyAssignmentsPage() {
                           ` · due ${new Date(c.due_date).toLocaleDateString()}`}
                       </CardDescription>
                     </CardHeader>
-                    <CardContent className="flex items-center justify-end">
+                    <CardContent className="flex items-center justify-between gap-2">
+                      <Button asChild size="sm" variant="ghost">
+                        <Link
+                          href={`/faculty/courses/${courseId}/coding/${c.id}/leaderboard`}
+                        >
+                          Leaderboard
+                        </Link>
+                      </Button>
                       <Button
                         size="sm"
                         variant="ghost"
                         onClick={async () => {
                           if (!confirm('Delete coding assessment?')) return;
                           await coding.remove(c.id);
-                          setCodingItems((prev) =>
-                            prev.filter((x) => x.id !== c.id),
-                          );
+                          setCodingItems((prev) => prev.filter((x) => x.id !== c.id));
                         }}
                       >
                         Delete
@@ -129,33 +137,66 @@ export default function FacultyAssignmentsPage() {
             </section>
           )}
 
-        <div className="grid gap-4 md:grid-cols-2">
-          {items.map((a) => (
-            <AssignmentCard
-              key={a.id}
-              assignment={a}
-              footer={
-                a.type === 'quiz' ? (
-                  <Button asChild size="sm" variant="secondary">
-                    <Link
-                      href={`/faculty/courses/${courseId}/assignments/${a.id}/edit`}
-                    >
-                      Edit quiz
-                    </Link>
-                  </Button>
-                ) : (
-                  <Button asChild size="sm" variant="secondary">
-                    <Link
-                      href={`/faculty/courses/${courseId}/assignments/${a.id}/submissions`}
-                    >
-                      Review submissions
-                    </Link>
-                  </Button>
-                )
-              }
-            />
-          ))}
-        </div>
+          {/* Quiz & file assignments */}
+          {items.length > 0 && (
+            <section className="space-y-3">
+              {codingItems.length > 0 && (
+                <h2 className="t-caption font-semibold uppercase tracking-wide text-[var(--ember)]">
+                  Quizzes &amp; File assignments
+                </h2>
+              )}
+              <div className="grid gap-4 md:grid-cols-2">
+                {items.map((a) => {
+                  const stat = statsMap[a.id];
+                  return (
+                    <AssignmentCard
+                      key={a.id}
+                      assignment={a}
+                      footer={
+                        <div className="flex w-full items-center justify-between gap-2">
+                          {stat ? (
+                            <span className="t-caption text-[var(--text-muted)]">
+                              {stat.completed}/{stat.total_enrolled} completed
+                            </span>
+                          ) : (
+                            <span />
+                          )}
+                          <div className="flex gap-2">
+                            {a.type === 'quiz' ? (
+                              <>
+                                <Button asChild size="sm" variant="ghost">
+                                  <Link
+                                    href={`/faculty/courses/${courseId}/assignments/${a.id}/leaderboard`}
+                                  >
+                                    Leaderboard
+                                  </Link>
+                                </Button>
+                                <Button asChild size="sm" variant="secondary">
+                                  <Link
+                                    href={`/faculty/courses/${courseId}/assignments/${a.id}/edit`}
+                                  >
+                                    Edit quiz
+                                  </Link>
+                                </Button>
+                              </>
+                            ) : (
+                              <Button asChild size="sm" variant="secondary">
+                                <Link
+                                  href={`/faculty/courses/${courseId}/assignments/${a.id}/submissions`}
+                                >
+                                  Review submissions
+                                </Link>
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      }
+                    />
+                  );
+                })}
+              </div>
+            </section>
+          )}
         </div>
       )}
     </div>

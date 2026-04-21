@@ -10,7 +10,7 @@ from fastapi import (
     UploadFile,
     status,
 )
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -39,6 +39,7 @@ from models.tables import (
 from schemas.requests import (
     AssignmentCreate,
     AssignmentOut,
+    AssignmentStatsOut,
     AssignmentUpdate,
     GradeSubmissionRequest,
     MessageResponse,
@@ -780,12 +781,25 @@ async def start_quiz_attempt(
         await db.commit()
         await db.refresh(attempt)
 
+    correct_count: int | None = None
+    if attempt.submitted_at is not None:
+        # Compute per-question correct count for the infographic.
+        # Each question has exactly one is_correct value stored across its answer rows.
+        cq_r = await db.execute(
+            select(QuizAnswer.question_id, QuizAnswer.is_correct)
+            .where(QuizAnswer.attempt_id == attempt.id)
+            .distinct(QuizAnswer.question_id)
+        )
+        correct_count = sum(1 for _, is_c in cq_r.all() if is_c)
+
     return QuizAttemptStartOut(
         attempt_id=attempt.id,
         assignment_id=assignment_id,
         started_at=attempt.started_at,
         submitted_at=attempt.submitted_at,
         max_score=attempt.max_score or max_score,
+        score=attempt.score,
+        correct_count=correct_count,
         questions=[_serialize_question_student(q) for q in questions],
     )
 
@@ -903,4 +917,64 @@ async def list_quiz_attempts(
             max_score=at.max_score,
         )
         for at in attempts
+    ]
+
+
+@router.get(
+    "/courses/{course_id}/assignments/stats",
+    response_model=list[AssignmentStatsOut],
+)
+async def assignment_stats(
+    course_id: int,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_faculty_or_admin),
+) -> list[AssignmentStatsOut]:
+    course = await _get_course_or_404(db, course_id)
+    if user.role == UserRole.faculty and course.faculty_id != user.id:
+        raise HTTPException(status_code=403, detail="Not your course")
+
+    enrolled_r = await db.execute(
+        select(func.count(Enrollment.id)).where(Enrollment.course_id == course_id)
+    )
+    total_enrolled: int = enrolled_r.scalar() or 0
+
+    asgn_r = await db.execute(
+        select(Assignment).where(Assignment.course_id == course_id)
+    )
+    all_assignments = list(asgn_r.scalars().all())
+    if not all_assignments:
+        return []
+
+    file_aids = [a.id for a in all_assignments if a.type == AssignmentType.file]
+    quiz_aids = [a.id for a in all_assignments if a.type == AssignmentType.quiz]
+
+    file_counts: dict[int, int] = {}
+    if file_aids:
+        fc_r = await db.execute(
+            select(Submission.assignment_id, func.count(Submission.id))
+            .where(Submission.assignment_id.in_(file_aids))
+            .group_by(Submission.assignment_id)
+        )
+        file_counts = {aid: cnt for aid, cnt in fc_r.all()}
+
+    quiz_counts: dict[int, int] = {}
+    if quiz_aids:
+        qc_r = await db.execute(
+            select(QuizAttempt.assignment_id, func.count(QuizAttempt.id))
+            .where(
+                QuizAttempt.assignment_id.in_(quiz_aids),
+                QuizAttempt.submitted_at.isnot(None),
+            )
+            .group_by(QuizAttempt.assignment_id)
+        )
+        quiz_counts = {aid: cnt for aid, cnt in qc_r.all()}
+
+    return [
+        AssignmentStatsOut(
+            assignment_id=a.id,
+            completed=file_counts.get(a.id, 0) if a.type == AssignmentType.file
+            else quiz_counts.get(a.id, 0),
+            total_enrolled=total_enrolled,
+        )
+        for a in all_assignments
     ]

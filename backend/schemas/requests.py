@@ -500,6 +500,8 @@ class QuizAttemptStartOut(BaseModel):
     started_at: datetime
     submitted_at: datetime | None = None
     max_score: int
+    score: int | None = None
+    correct_count: int | None = None
     questions: list[QuizQuestionStudentOut]
 
 
@@ -545,6 +547,22 @@ class QuizAttemptSummaryOut(BaseModel):
     submitted_at: datetime | None = None
     score: int | None = None
     max_score: int | None = None
+
+
+class AssignmentStatsOut(BaseModel):
+    assignment_id: int
+    completed: int
+    total_enrolled: int
+
+
+class CodingLeaderboardEntry(BaseModel):
+    rank: int
+    student_id: int
+    student_name: str | None = None
+    best_score: int
+    max_score: int
+    submissions: int
+    last_submitted_at: datetime
 
 
 # ---------- Coding Assessments (UPDATE.md) ----------
@@ -762,4 +780,34 @@ class JudgeSubmitResult(BaseModel):
     stdout: str | None = None
     stderr: str | None = None
     submitted_at: datetime
+
+
+# ---------- Calendar Custom Events (Day 12+) ----------
+
+
+class CalendarEventCreate(BaseModel):
+    title: str = Field(min_length=1, max_length=200)
+    description: str | None = None
+    event_date: datetime
+    reminder_minutes: int | None = None
+
+
+class CalendarEventOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    user_id: int
+    title: str
+    description: str | None = None
+    event_date: datetime
+    reminder_minutes: int | None = None
+    reminder_sent: bool
+    created_at: datetime
+
+
+class CalendarEventUpdate(BaseModel):
+    title: str | None = Field(default=None, min_length=1, max_length=200)
+    description: str | None = None
+    event_date: datetime | None = None
+    reminder_minutes: int | None = None
     test_cases: list[JudgeTestCaseResult] = []

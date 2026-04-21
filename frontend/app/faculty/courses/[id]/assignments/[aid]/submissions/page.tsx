@@ -96,10 +96,10 @@ export default function FacultySubmissionsPage() {
     <div className="space-y-6">
       <header className="space-y-2">
         <Link
-          href={`/faculty/courses/${courseId}/assignments`}
+          href="/faculty/assessments"
           className="text-xs text-[var(--text-secondary)] hover:underline"
         >
-          ← Back to assignments
+          ← Back to assessments
         </Link>
         <h1 className="text-2xl font-semibold">
           Submissions{assignment ? ` · ${assignment.title}` : ''}

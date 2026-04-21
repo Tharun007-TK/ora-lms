@@ -8,7 +8,6 @@ import {
   Button,
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from '@/components/ora';
@@ -17,6 +16,102 @@ import {
   type QuizAttemptResult,
   type QuizAttemptStart,
 } from '@/lib/api';
+
+const CIRC = 2 * Math.PI * 40;
+
+function ResultInfographic({
+  correct,
+  wrong,
+  score,
+  maxScore,
+  total,
+  courseId,
+}: {
+  correct: number;
+  wrong: number;
+  score: number;
+  maxScore: number;
+  total: number;
+  courseId: number;
+}) {
+  const correctPct = total > 0 ? correct / total : 0;
+  const wrongPct = total > 0 ? wrong / total : 0;
+  const pct = maxScore > 0 ? Math.round((score / maxScore) * 100) : 0;
+
+  return (
+    <div className="mx-auto max-w-md space-y-8 py-8 text-center">
+      <div>
+        <h1 className="text-2xl font-bold text-[var(--ink)]">Quiz Complete</h1>
+        <p className="t-caption mt-1 text-[var(--text-muted)]">Your results are in</p>
+      </div>
+
+      {/* Donut ring */}
+      <div className="relative mx-auto h-40 w-40">
+        <svg viewBox="0 0 100 100" className="h-full w-full -rotate-90">
+          <circle
+            cx="50" cy="50" r="40" fill="none"
+            stroke="var(--surface-sunken)" strokeWidth="12"
+          />
+          <circle
+            cx="50" cy="50" r="40" fill="none"
+            stroke="var(--ember)" strokeWidth="12"
+            strokeDasharray={`${correctPct * CIRC} ${CIRC}`}
+            strokeLinecap="round"
+          />
+          <circle
+            cx="50" cy="50" r="40" fill="none"
+            stroke="var(--danger-fg)" strokeWidth="12"
+            strokeDasharray={`${wrongPct * CIRC} ${CIRC}`}
+            strokeDashoffset={`${-correctPct * CIRC}`}
+            strokeLinecap="round"
+          />
+        </svg>
+        <div className="absolute inset-0 flex flex-col items-center justify-center">
+          <span className="text-3xl font-bold text-[var(--ink)]">{pct}%</span>
+          <span className="t-caption text-[var(--text-muted)]">score</span>
+        </div>
+      </div>
+
+      {/* Correct / Wrong / Skipped */}
+      <div className="flex justify-center gap-8">
+        <div className="space-y-1">
+          <p className="text-4xl font-bold text-[var(--ember)]">{correct}</p>
+          <p className="t-caption text-[var(--text-muted)]">Correct</p>
+        </div>
+        <div className="h-12 w-px bg-[var(--border-subtle)]" />
+        <div className="space-y-1">
+          <p className="text-4xl font-bold text-[var(--danger-fg)]">{wrong}</p>
+          <p className="t-caption text-[var(--text-muted)]">Wrong</p>
+        </div>
+        <div className="h-12 w-px bg-[var(--border-subtle)]" />
+        <div className="space-y-1">
+          <p className="text-4xl font-bold text-[var(--text-muted)]">
+            {Math.max(0, total - correct - wrong)}
+          </p>
+          <p className="t-caption text-[var(--text-muted)]">Skipped</p>
+        </div>
+      </div>
+
+      {/* Marks card */}
+      <Card>
+        <CardContent className="py-6">
+          <p className="t-caption text-[var(--text-muted)]">Total marks</p>
+          <p className="mt-1 text-5xl font-bold text-[var(--ink)]">
+            {score}
+            <span className="text-2xl text-[var(--text-muted)]">/{maxScore}</span>
+          </p>
+        </CardContent>
+      </Card>
+
+      <Button
+        variant="secondary"
+        onClick={() => { window.location.href = `/student/courses/${courseId}/assignments`; }}
+      >
+        Back to assignments
+      </Button>
+    </div>
+  );
+}
 
 export default function QuizAttemptPage() {
   const params = useParams<{ id: string; aid: string }>();
@@ -35,15 +130,8 @@ export default function QuizAttemptPage() {
     if (!Number.isFinite(aid)) return;
     quiz
       .startAttempt(aid)
-      .then((a) => {
-        setAttempt(a);
-        if (a.submitted_at) {
-          setError('You have already submitted this quiz.');
-        }
-      })
-      .catch((err: Error) =>
-        setError(err.message || 'Failed to start attempt'),
-      )
+      .then((a) => setAttempt(a))
+      .catch((err: Error) => setError(err.message || 'Failed to start attempt'))
       .finally(() => setLoading(false));
   }, [aid]);
 
@@ -97,83 +185,37 @@ export default function QuizAttemptPage() {
       </div>
     );
 
-  if (result && attempt) {
+  // Already submitted — show infographic using data from startAttempt
+  if (attempt?.submitted_at && !result) {
+    const correctCount = attempt.correct_count ?? 0;
+    const wrongCount = Math.max(0, total - correctCount);
     return (
-      <div className="mx-auto max-w-2xl space-y-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Quiz submitted</CardTitle>
-            <CardDescription>
-              You scored {result.score} / {result.max_score}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {attempt.questions.map((q, i) => {
-              const ans = result.answers.find((a) => a.question_id === q.id);
-              if (!ans) return null;
-              return (
-                <div key={q.id} className="space-y-2 rounded-md border-hair p-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <p className="t-body font-medium">
-                      Q{i + 1}. {q.question_text}
-                    </p>
-                    <span
-                      className={`t-caption font-semibold ${
-                        ans.is_correct
-                          ? 'text-[var(--ember)]'
-                          : 'text-[var(--danger-fg)]'
-                      }`}
-                    >
-                      {ans.points_earned}/{ans.points_max}
-                    </span>
-                  </div>
-                  <ul className="space-y-1">
-                    {q.options.map((o) => {
-                      const picked = ans.selected_option_ids.includes(o.id);
-                      const isRight = ans.correct_option_ids.includes(o.id);
-                      return (
-                        <li
-                          key={o.id}
-                          className={`flex items-center gap-2 t-body ${
-                            isRight ? 'text-[var(--ember)]' : ''
-                          }`}
-                        >
-                          <span
-                            className={`inline-block h-4 w-4 rounded-full border ${
-                              picked
-                                ? 'border-[var(--ember)] bg-[var(--ember)]'
-                                : 'border-[var(--text-muted)]'
-                            }`}
-                          />
-                          <span>{o.option_text}</span>
-                          {isRight && (
-                            <span className="t-caption">correct</span>
-                          )}
-                          {picked && !isRight && (
-                            <span className="t-caption text-[var(--danger-fg)]">
-                              your pick
-                            </span>
-                          )}
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </div>
-              );
-            })}
-            <div className="pt-2">
-              <Button
-                variant="secondary"
-                onClick={() => {
-                  window.location.href = `/student/courses/${courseId}/assignments`;
-                }}
-              >
-                Back to assignments
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <ResultInfographic
+        correct={correctCount}
+        wrong={wrongCount}
+        score={attempt.score ?? 0}
+        maxScore={attempt.max_score}
+        total={total}
+        courseId={courseId}
+      />
+    );
+  }
+
+  // Just submitted — show infographic from fresh result
+  if (result && attempt) {
+    const correctCount = result.answers.filter((a) => a.is_correct).length;
+    const wrongCount = result.answers.filter(
+      (a) => !a.is_correct && a.selected_option_ids.length > 0,
+    ).length;
+    return (
+      <ResultInfographic
+        correct={correctCount}
+        wrong={wrongCount}
+        score={result.score}
+        maxScore={result.max_score}
+        total={total}
+        courseId={courseId}
+      />
     );
   }
 
@@ -181,9 +223,7 @@ export default function QuizAttemptPage() {
     return <p className="t-body text-[var(--text-secondary)]">No quiz data.</p>;
 
   const selected = selections[question.id] ?? new Set<number>();
-  const answeredCount = Object.values(selections).filter(
-    (s) => s.size > 0,
-  ).length;
+  const answeredCount = Object.values(selections).filter((s) => s.size > 0).length;
   const isLast = idx === total - 1;
 
   return (
@@ -210,9 +250,9 @@ export default function QuizAttemptPage() {
       <Card>
         <CardHeader>
           <CardTitle className="text-base">{question.question_text}</CardTitle>
-          <CardDescription>
+          <p className="t-caption text-[var(--text-muted)]">
             {question.points} pt{question.points !== 1 ? 's' : ''} · select all that apply
-          </CardDescription>
+          </p>
         </CardHeader>
         <CardContent className="space-y-2">
           {question.options.map((o) => (

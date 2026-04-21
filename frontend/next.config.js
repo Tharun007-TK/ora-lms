@@ -9,9 +9,6 @@ const withPWA = require('@ducanh2912/next-pwa').default({
 const nextConfig = {
   reactStrictMode: true,
   transpilePackages: ['tailwind-merge'],
-  experimental: {
-    typedRoutes: false,
-  },
 };
 
 module.exports = withPWA(nextConfig);

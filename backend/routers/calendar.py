@@ -1,19 +1,14 @@
-"""Calendar aggregation (Day 12).
+"""Calendar aggregation + user-created events (Day 12).
 
-Read-only aggregation of existing deadlines — assignment + quiz due dates,
-scoped by role:
-- student: assignments from enrolled courses
-- faculty: assignments from courses they teach
-- admin: all assignments in the date range
-
-No schema changes. No event creation. No recurrence.
+Aggregates existing assignment/quiz deadlines (read-only) and provides
+CRUD for user-created calendar events with optional reminders.
 """
 from __future__ import annotations
 
 from datetime import date, datetime, time, timedelta, timezone
 from typing import Literal
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -23,6 +18,7 @@ from core.database import get_db
 from models.tables import (
     Assignment,
     AssignmentType,
+    CalendarCustomEvent,
     Course,
     Enrollment,
     QuizAttempt,
@@ -30,6 +26,8 @@ from models.tables import (
     User,
     UserRole,
 )
+from schemas.requests import CalendarEventCreate, CalendarEventOut, CalendarEventUpdate
+from services import notification_service
 
 
 router = APIRouter(prefix="/calendar", tags=["calendar"])
@@ -180,3 +178,125 @@ async def list_events(
         )
 
     return events
+
+
+# ---------- User-created events ----------
+
+
+@router.post("/events", response_model=CalendarEventOut, status_code=status.HTTP_201_CREATED)
+async def create_event(
+    body: CalendarEventCreate,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> CalendarEventOut:
+    if user.role == UserRole.admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admins cannot create personal calendar events",
+        )
+    ev = CalendarCustomEvent(
+        user_id=user.id,
+        title=body.title,
+        description=body.description,
+        event_date=body.event_date,
+        reminder_minutes=body.reminder_minutes,
+    )
+    db.add(ev)
+    await db.commit()
+    await db.refresh(ev)
+    return ev  # type: ignore[return-value]
+
+
+@router.get("/events", response_model=list[CalendarEventOut])
+async def list_custom_events(
+    from_: date = Query(..., alias="from"),
+    to: date = Query(...),
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> list[CalendarEventOut]:
+    start, end = _to_utc_range(from_, to)
+    result = await db.execute(
+        select(CalendarCustomEvent)
+        .where(
+            CalendarCustomEvent.user_id == user.id,
+            CalendarCustomEvent.event_date >= start,
+            CalendarCustomEvent.event_date <= end,
+        )
+        .order_by(CalendarCustomEvent.event_date.asc())
+    )
+    events = list(result.scalars().all())
+
+    # Fire any due reminders (polling — runs on calendar load).
+    now = datetime.now(timezone.utc)
+    to_notify: list[CalendarCustomEvent] = []
+    for ev in events:
+        if ev.reminder_minutes is not None and not ev.reminder_sent:
+            reminder_at = ev.event_date - timedelta(minutes=ev.reminder_minutes)
+            if reminder_at <= now:
+                ev.reminder_sent = True
+                to_notify.append(ev)
+
+    if to_notify:
+        await db.flush()
+        await db.commit()
+        for ev in to_notify:
+            await notification_service.notify(
+                db,
+                user_ids=[user.id],
+                title=f"Reminder: {ev.title}",
+                body=(
+                    f"Starts at {ev.event_date.strftime('%H:%M')} · "
+                    + (ev.description[:80] if ev.description else "")
+                ).rstrip(" · "),
+            )
+
+    return events  # type: ignore[return-value]
+
+
+@router.patch("/events/{eid}", response_model=CalendarEventOut)
+async def update_event(
+    eid: int,
+    body: CalendarEventUpdate,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> CalendarEventOut:
+    result = await db.execute(
+        select(CalendarCustomEvent).where(
+            CalendarCustomEvent.id == eid,
+            CalendarCustomEvent.user_id == user.id,
+        )
+    )
+    ev = result.scalar_one_or_none()
+    if ev is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Event not found")
+
+    data = body.model_dump(exclude_unset=True)
+    for key, value in data.items():
+        setattr(ev, key, value)
+
+    if "event_date" in data or "reminder_minutes" in data:
+        ev.reminder_sent = False
+
+    await db.commit()
+    await db.refresh(ev)
+    return ev  # type: ignore[return-value]
+
+
+@router.delete("/events/{eid}")
+async def delete_event(
+    eid: int,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> Response:
+    result = await db.execute(
+        select(CalendarCustomEvent).where(
+            CalendarCustomEvent.id == eid,
+            CalendarCustomEvent.user_id == user.id,
+        )
+    )
+    ev = result.scalar_one_or_none()
+    if ev is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Event not found")
+    await db.delete(ev)
+    await db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

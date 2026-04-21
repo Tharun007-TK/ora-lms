@@ -21,7 +21,10 @@
       "Bash(curl *)",
       "Bash(tasklist)",
       "Bash(venv/Scripts/python.exe -c \"from main import app; runs=[r.path for r in app.routes if '/run' in getattr\\(r,'path',''\\)]; print\\('run routes:', runs\\); print\\('total:', len\\(app.routes\\)\\)\")",
-      "Bash(venv/Scripts/pip.exe show *)"
+      "Bash(venv/Scripts/pip.exe show *)",
+      "Bash(alembic upgrade *)",
+      "Bash(\"D:\\\\Projects\\\\ORA LMS\\\\backend\\\\venv\\\\Scripts\\\\alembic.exe\" upgrade head)",
+      "Bash(\"D:\\\\Projects\\\\ORA LMS\\\\backend\\\\venv\\\\Scripts\\\\uvicorn.exe\" main:app --reload --host 0.0.0.0 --port 8000)"
     ],
     "deny": [
       "Bash(python -c:*)",
