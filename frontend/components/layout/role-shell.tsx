@@ -1,5 +1,6 @@
 'use client';
 
+import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
 
 import { Navbar } from '@/components/layout/navbar';
@@ -11,24 +12,23 @@ export function RoleShell({
   children,
 }: {
   role: UserRole;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   const [user, setUser] = useState<User | null>(null);
+  const [authDone, setAuthDone] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     auth
       .me()
-      .then((u) => {
-        if (!cancelled) setUser(u);
-      })
+      .then((u) => { if (!cancelled) setUser(u); })
       .catch(() => {
-        /* middleware redirects */
-      });
-    return () => {
-      cancelled = true;
-    };
+        // 401 already triggers redirect via apiFetch.
+        // Other failures leave the middleware-verified session intact.
+      })
+      .finally(() => { if (!cancelled) setAuthDone(true); });
+    return () => { cancelled = true; };
   }, []);
 
   return (
@@ -40,7 +40,7 @@ export function RoleShell({
         onClose={() => setDrawerOpen(false)}
       />
       <div className="flex min-w-0 flex-1 flex-col">
-        <Navbar user={user} onMenuOpen={() => setDrawerOpen(true)} />
+        <Navbar user={user} role={role} authDone={authDone} onMenuOpen={() => setDrawerOpen(true)} />
         <main className="flex-1 px-4 py-6 sm:px-6 sm:py-8">{children}</main>
       </div>
     </div>

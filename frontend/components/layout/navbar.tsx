@@ -5,13 +5,17 @@ import { useRouter } from 'next/navigation';
 
 import { NotificationBell } from '@/components/layout/notification-bell';
 import { Avatar, Button } from '@/components/ora';
-import { auth, type User } from '@/lib/api';
+import { auth, type User, type UserRole } from '@/lib/api';
 
 export function Navbar({
   user,
+  role,
+  authDone = false,
   onMenuOpen,
 }: {
   user: User | null;
+  role?: UserRole;
+  authDone?: boolean;
   onMenuOpen?: () => void;
 }) {
   const router = useRouter();
@@ -57,8 +61,10 @@ export function Navbar({
                 </span>
               </span>
             </>
+          ) : authDone ? (
+            <span className="t-eyebrow text-[var(--ember)]">{role ?? 'signed in'}</span>
           ) : (
-            'Loading…'
+            <span className="text-[var(--text-muted)]">Loading…</span>
           )}
         </div>
       </div>

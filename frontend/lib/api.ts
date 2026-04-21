@@ -305,8 +305,9 @@ export interface ApiError extends Error {
   detail?: string;
 }
 
-export const API_URL =
-  process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+export const API_URL = (
+  process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+).replace(/\/+$/, '');
 
 function buildError(status: number, detail: string): ApiError {
   const err = new Error(detail) as ApiError;
