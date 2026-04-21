@@ -1,8 +1,24 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { jwtVerify } from 'jose';
 
-import { COOKIE_NAME, dashboardPathForRole, roleFromPath } from '@/lib/auth';
-import type { UserRole } from '@/lib/api';
+type UserRole = 'admin' | 'faculty' | 'student';
+
+const COOKIE_NAME = process.env.COOKIE_NAME || 'ora_session';
+
+function dashboardPathForRole(role: UserRole): string {
+  switch (role) {
+    case 'admin': return '/admin/dashboard';
+    case 'faculty': return '/faculty/dashboard';
+    default: return '/student/dashboard';
+  }
+}
+
+function roleFromPath(pathname: string): UserRole | null {
+  if (pathname.startsWith('/admin')) return 'admin';
+  if (pathname.startsWith('/faculty')) return 'faculty';
+  if (pathname.startsWith('/student')) return 'student';
+  return null;
+}
 
 const PUBLIC_PREFIXES = ['/college', '/api', '/_next', '/favicon', '/icons', '/manifest'];
 const AUTH_PAGES = ['/login', '/register'];
