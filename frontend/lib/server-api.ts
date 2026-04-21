@@ -9,16 +9,35 @@ import type {
 } from '@/lib/api';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+const SERVER_FETCH_TIMEOUT_MS = Number(
+  process.env.SERVER_FETCH_TIMEOUT_MS ?? 12000,
+);
+
+function createTimeoutSignal(timeoutMs: number): {
+  signal: AbortSignal;
+  clear: () => void;
+} {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  return {
+    signal: controller.signal,
+    clear: () => clearTimeout(timeoutId),
+  };
+}
 
 async function serverFetch<T>(path: string, revalidate = 3600): Promise<T | null> {
+  const { signal, clear } = createTimeoutSignal(SERVER_FETCH_TIMEOUT_MS);
   try {
     const res = await fetch(`${API_URL}${path}`, {
       next: { revalidate },
+      signal,
     });
     if (!res.ok) return null;
     return (await res.json()) as T;
   } catch {
     return null;
+  } finally {
+    clear();
   }
 }
 
@@ -42,6 +61,7 @@ export function resolveServerFileUrl(url: string | null | undefined): string | n
 }
 
 async function authedServerFetch<T>(path: string): Promise<T | null> {
+  const { signal, clear } = createTimeoutSignal(SERVER_FETCH_TIMEOUT_MS);
   try {
     const cookieStore = await cookies();
     const cookieHeader = cookieStore
@@ -51,11 +71,14 @@ async function authedServerFetch<T>(path: string): Promise<T | null> {
     const res = await fetch(`${API_URL}${path}`, {
       cache: 'no-store',
       headers: cookieHeader ? { cookie: cookieHeader } : undefined,
+      signal,
     });
     if (!res.ok) return null;
     return (await res.json()) as T;
   } catch {
     return null;
+  } finally {
+    clear();
   }
 }
 
