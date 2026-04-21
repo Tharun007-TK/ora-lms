@@ -20,14 +20,29 @@ class Base(DeclarativeBase):
     pass
 
 
+def _normalise_db_url(url: str) -> str:
+    # Supabase and most hosting panels emit postgres:// or postgresql://
+    # SQLAlchemy async requires postgresql+asyncpg://
+    if url.startswith("postgres://"):
+        return "postgresql+asyncpg://" + url[len("postgres://"):]
+    if url.startswith("postgresql://"):
+        return "postgresql+asyncpg://" + url[len("postgresql://"):]
+    if not url.startswith("postgresql+asyncpg://"):
+        scheme = url.split("://")[0]
+        raise ValueError(
+            f"DATABASE_URL has unsupported scheme {scheme!r}. "
+            "Expected postgresql+asyncpg://, postgresql://, or postgres://"
+        )
+    return url
+
+
 def _build_engine() -> AsyncEngine:
-    url = settings.DATABASE_URL
+    url = _normalise_db_url(settings.DATABASE_URL)
     kwargs: dict[str, Any] = {
         "echo": settings.DEBUG,
         "pool_pre_ping": True,
         "future": True,
     }
-    # asyncpg does not support statement_cache issues with pgbouncer etc.
     return create_async_engine(url, **kwargs)
 
 
