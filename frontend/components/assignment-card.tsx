@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import Link from 'next/link';
 
 import {
@@ -35,7 +36,7 @@ export function AssignmentCard({
 }: {
   assignment: Assignment;
   href?: string;
-  footer?: React.ReactNode;
+  footer?: ReactNode;
 }) {
   const tone = dueDateTone(assignment.due_date);
   const Heading = href ? (

@@ -1,9 +1,10 @@
+import type { ReactNode } from 'react';
 import Link from 'next/link';
 
 export default function CollegeLayout({
   children,
 }: {
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   return (
     <div className="min-h-screen bg-[var(--surface-base)]">

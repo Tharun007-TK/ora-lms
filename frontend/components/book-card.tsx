@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import Link from 'next/link';
 
 import {
@@ -17,7 +18,7 @@ export function BookCard({
 }: {
   book: LibraryBook;
   href: string;
-  footer?: React.ReactNode;
+  footer?: ReactNode;
 }) {
   const cover = fileUrl(book.cover_url);
   return (

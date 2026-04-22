@@ -31,8 +31,8 @@ def _set_session_cookie(response: Response, token: str) -> None:
         value=token,
         max_age=settings.JWT_EXPIRES_MINUTES * 60,
         httponly=True,
-        secure=settings.COOKIE_SECURE,
-        samesite=settings.COOKIE_SAMESITE,
+        secure=settings.effective_cookie_secure,
+        samesite=settings.effective_cookie_samesite,
         domain=settings.COOKIE_DOMAIN,
         path="/",
     )

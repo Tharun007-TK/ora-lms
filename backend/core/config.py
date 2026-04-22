@@ -26,11 +26,14 @@ class Settings(BaseSettings):
     JWT_ALGORITHM: str = Field(default="HS256")
     JWT_EXPIRES_MINUTES: int = Field(default=60 * 24 * 7)  # 7 days
     COOKIE_NAME: str = Field(default="ora_session")
-    COOKIE_SECURE: bool = Field(default=False)
-    COOKIE_SAMESITE: str = Field(default="lax")
+    # Cross-origin (Vercel → Render) requires SameSite=none + Secure=true.
+    # Leave unset to auto-derive from ENVIRONMENT; or override explicitly.
+    COOKIE_SECURE: bool | None = Field(default=None)
+    COOKIE_SAMESITE: str | None = Field(default=None)
     COOKIE_DOMAIN: str | None = Field(default=None)
 
-    # CORS
+    # CORS — comma-separated. Set to your Vercel URL on Render.
+    # e.g. CORS_ORIGINS=https://ora-lms.vercel.app
     CORS_ORIGINS: str = Field(default="http://localhost:3000")
 
     # External services
@@ -69,6 +72,19 @@ class Settings(BaseSettings):
     @property
     def cors_origins_list(self) -> list[str]:
         return [o.strip() for o in self.CORS_ORIGINS.split(",") if o.strip()]
+
+    @property
+    def effective_cookie_secure(self) -> bool:
+        if self.COOKIE_SECURE is not None:
+            return self.COOKIE_SECURE
+        return self.ENVIRONMENT == "production"
+
+    @property
+    def effective_cookie_samesite(self) -> str:
+        if self.COOKIE_SAMESITE is not None:
+            return self.COOKIE_SAMESITE
+        # Cross-origin deployments need SameSite=none (requires Secure=true).
+        return "none" if self.ENVIRONMENT == "production" else "lax"
 
 
 @lru_cache

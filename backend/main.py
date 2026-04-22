@@ -85,3 +85,8 @@ app.include_router(notifications_router.router)
 app.include_router(profile_router.router)
 app.include_router(calendar_router.router)
 app.include_router(coding_assessments_router.router)
+app.include_router(
+    coding_assessments_router.router,
+    prefix="/api",
+    include_in_schema=False,
+)

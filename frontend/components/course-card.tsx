@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import Link from 'next/link';
 
 import {
@@ -18,7 +19,7 @@ export function CourseCard({
 }: {
   course: Course;
   href: string;
-  footer?: React.ReactNode;
+  footer?: ReactNode;
 }) {
   return (
     <Card className="flex h-full flex-col">

@@ -41,7 +41,7 @@ from schemas.requests import (
 from services import judge_service
 
 
-router = APIRouter(prefix="/api/coding-assessments", tags=["coding-assessments"])
+router = APIRouter(prefix="/coding-assessments", tags=["coding-assessments"])
 
 
 async def _get_assessment_or_404(
