@@ -545,6 +545,28 @@ export const assignments = {
   listMine: () => apiFetch<Assignment[]>('/my-assignments'),
   stats: (courseId: number) =>
     apiFetch<AssignmentStatsEntry[]>(`/courses/${courseId}/assignments/stats`),
+  importQuiz: (
+    courseId: number,
+    opts: {
+      file: File;
+      due_date: string;
+      title?: string;
+      description?: string;
+      max_marks?: number;
+    },
+  ) => {
+    const fd = new FormData();
+    fd.set('file', opts.file);
+    fd.set('due_date', opts.due_date);
+    if (opts.title) fd.set('title', opts.title);
+    if (opts.description) fd.set('description', opts.description);
+    if (opts.max_marks !== undefined)
+      fd.set('max_marks', String(opts.max_marks));
+    return apiUpload<Assignment>(
+      `/courses/${courseId}/assignments/quiz/import`,
+      fd,
+    );
+  },
 };
 
 export const library = {

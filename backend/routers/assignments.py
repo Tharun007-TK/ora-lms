@@ -6,6 +6,7 @@ from fastapi import (
     APIRouter,
     Depends,
     File,
+    Form,
     HTTPException,
     UploadFile,
     status,
@@ -57,6 +58,7 @@ from schemas.requests import (
     SubmissionOut,
 )
 from services import notification_service, quiz_service, storage_service
+from services.docx_quiz_parser import DocxParseError, parse_docx_quiz
 
 
 router = APIRouter(tags=["assignments"])
@@ -241,6 +243,133 @@ async def create_assignment(
             title=f"New assignment: {assignment.title}",
             body=(
                 f"Due {assignment.due_date.isoformat()} · "
+                f"max {assignment.max_marks} marks"
+            ),
+        )
+        db.add(n)
+        created_notifs.append(n)
+
+    await db.commit()
+    await db.refresh(assignment)
+    for n in created_notifs:
+        await db.refresh(n)
+        await notification_service.publish_one(n)
+    return _serialize_assignment(assignment)
+
+
+_DOCX_CONTENT_TYPES = {
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "application/octet-stream",  # some browsers send this
+}
+_DOCX_MAX_BYTES = 5 * 1024 * 1024  # 5 MB
+
+
+@router.post(
+    "/courses/{course_id}/assignments/quiz/import",
+    response_model=AssignmentOut,
+    status_code=status.HTTP_201_CREATED,
+)
+async def import_quiz_from_docx(
+    course_id: int,
+    due_date: datetime = Form(...),
+    file: UploadFile = File(...),
+    title: str | None = Form(default=None),
+    description: str | None = Form(default=None),
+    max_marks: int | None = Form(default=None),
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_faculty_or_admin),
+) -> AssignmentOut:
+    """Parse an uploaded .docx file and create a full quiz assignment in
+    one step — questions, options, and correct answers extracted
+    automatically. See ``ml_sample_quiz.docx`` for the expected layout."""
+    course = await _get_course_or_404(db, course_id)
+    if user.role == UserRole.faculty and course.faculty_id != user.id:
+        raise HTTPException(status_code=403, detail="Not your course")
+
+    filename = (file.filename or "").lower()
+    if not filename.endswith(".docx"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Only .docx files are supported",
+        )
+    if file.content_type and file.content_type not in _DOCX_CONTENT_TYPES:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Unexpected content type: {file.content_type}",
+        )
+
+    data = await file.read()
+    if not data:
+        raise HTTPException(status_code=400, detail="Uploaded file is empty")
+    if len(data) > _DOCX_MAX_BYTES:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail="File exceeds 5 MB limit",
+        )
+
+    try:
+        parsed = parse_docx_quiz(data)
+    except DocxParseError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    if not parsed.questions:
+        raise HTTPException(
+            status_code=400,
+            detail="No valid questions were parsed from the document",
+        )
+
+    total_points = sum(q.points for q in parsed.questions)
+    resolved_title = (
+        title.strip()
+        if title and title.strip()
+        else (parsed.title or "Imported Quiz")
+    )
+    resolved_max = max_marks if max_marks is not None else total_points
+    if resolved_max < 1:
+        resolved_max = total_points
+
+    assignment = Assignment(
+        course_id=course_id,
+        title=resolved_title,
+        description=description,
+        due_date=due_date,
+        max_marks=resolved_max,
+        created_by=user.id,
+        type=AssignmentType.quiz,
+    )
+    db.add(assignment)
+    await db.flush()
+
+    for q_idx, q in enumerate(parsed.questions):
+        question = QuizQuestion(
+            assignment_id=assignment.id,
+            question_text=q.text,
+            position=q_idx,
+            points=q.points,
+        )
+        db.add(question)
+        await db.flush()
+        for o_idx, opt_text in enumerate(q.options):
+            db.add(
+                QuizOption(
+                    question_id=question.id,
+                    option_text=opt_text,
+                    is_correct=o_idx in q.correct_indexes,
+                    position=o_idx,
+                )
+            )
+
+    enrolled = await db.execute(
+        select(Enrollment.student_id).where(Enrollment.course_id == course_id)
+    )
+    created_notifs: list[Notification] = []
+    for (student_id,) in enrolled.all():
+        n = Notification(
+            user_id=student_id,
+            title=f"New quiz: {assignment.title}",
+            body=(
+                f"{len(parsed.questions)} question(s) · "
+                f"due {assignment.due_date.isoformat()} · "
                 f"max {assignment.max_marks} marks"
             ),
         )

@@ -72,6 +72,27 @@ async def get_current_user(
     return user
 
 
+async def get_current_user_optional(
+    db: AsyncSession = Depends(get_db),
+    session_cookie: str | None = Cookie(default=None, alias=settings.COOKIE_NAME),
+) -> User | None:
+    """Like :func:`get_current_user` but returns ``None`` for anonymous or
+    invalid sessions instead of raising. For endpoints that are readable by
+    the public but still want to recognize a signed-in viewer."""
+    if not session_cookie:
+        return None
+    try:
+        payload = decode_token(session_cookie)
+        user_id = int(payload["sub"])
+    except (JWTError, KeyError, ValueError):
+        return None
+    result = await db.execute(select(User).where(User.id == user_id))
+    user = result.scalar_one_or_none()
+    if user is None or not user.is_active:
+        return None
+    return user
+
+
 def require_role(*roles: UserRole):
     allowed = {r.value if isinstance(r, UserRole) else r for r in roles}
 

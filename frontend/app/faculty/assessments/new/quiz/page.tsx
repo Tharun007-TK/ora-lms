@@ -30,6 +30,10 @@ export default function NewQuizAssessmentPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const [docxFile, setDocxFile] = useState<File | null>(null);
+  const [importing, setImporting] = useState(false);
+  const [importError, setImportError] = useState<string | null>(null);
+
   useEffect(() => {
     courses
       .list({ mine: true })
@@ -63,6 +67,31 @@ export default function NewQuizAssessmentPage() {
       setError(err instanceof Error ? err.message : 'Create failed');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const importFromDocx = async () => {
+    setImportError(null);
+    if (courseId == null) return setImportError('Pick a course.');
+    if (!docxFile) return setImportError('Choose a .docx file.');
+    if (!due) return setImportError('Due date required.');
+    setImporting(true);
+    try {
+      const created = await assignments.importQuiz(courseId, {
+        file: docxFile,
+        due_date: new Date(due).toISOString(),
+        title: title.trim() || undefined,
+        description: description.trim() || undefined,
+        max_marks: maxMarks > 0 ? maxMarks : undefined,
+      });
+      router.replace(
+        `/faculty/courses/${courseId}/assignments/${created.id}/edit`,
+      );
+      router.refresh();
+    } catch (err) {
+      setImportError(err instanceof Error ? err.message : 'Import failed');
+    } finally {
+      setImporting(false);
     }
   };
 
@@ -159,6 +188,68 @@ export default function NewQuizAssessmentPage() {
           </Button>
           <Button onClick={submit} disabled={saving} loading={saving}>
             {saving ? 'Creating…' : 'Next · add questions'}
+          </Button>
+        </CardFooter>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Or, import the whole quiz from .docx</CardTitle>
+          <CardDescription>
+            Upload a Word document formatted like{' '}
+            <a
+              href="/ml_sample_quiz.docx"
+              download
+              className="underline hover:text-[var(--ember)]"
+            >
+              ml_sample_quiz.docx
+            </a>{' '}
+            — numbered questions, lettered options (a., b., c., …), and an{' '}
+            <code className="rounded bg-[var(--surface-raised)] px-1 py-0.5 t-caption">
+              Answer:
+            </code>{' '}
+            line per question. The quiz will be created with all questions,
+            options, and correct answers pre-filled.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="q-docx">.docx file</Label>
+            <Input
+              id="q-docx"
+              type="file"
+              accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+              onChange={(e) => {
+                const f = e.target.files?.[0] ?? null;
+                setDocxFile(f);
+                setImportError(null);
+              }}
+            />
+            {docxFile && (
+              <p className="t-caption text-[var(--text-muted)]">
+                Selected: {docxFile.name} (
+                {(docxFile.size / 1024).toFixed(1)} KB)
+              </p>
+            )}
+            <p className="t-caption text-[var(--text-muted)]">
+              Due date above is reused. Title falls back to the document&apos;s
+              first line; max marks falls back to the sum of per-question
+              points.
+            </p>
+          </div>
+
+          {importError && (
+            <p className="t-caption text-[var(--danger-fg)]">{importError}</p>
+          )}
+        </CardContent>
+        <CardFooter className="flex justify-end gap-2">
+          <Button
+            variant="secondary"
+            onClick={importFromDocx}
+            disabled={importing || !docxFile}
+            loading={importing}
+          >
+            {importing ? 'Importing…' : 'Import quiz from .docx'}
           </Button>
         </CardFooter>
       </Card>

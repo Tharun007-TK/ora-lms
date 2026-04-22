@@ -5,7 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from core.auth import get_current_user
+from core.auth import get_current_user, get_current_user_optional
 from core.config import settings
 from core.database import get_db
 from models.tables import Course, Department, Enrollment, User, UserProfile, UserRole
@@ -160,7 +160,7 @@ async def upload_cover(
 async def get_public_profile(
     user_id: int,
     db: AsyncSession = Depends(get_db),
-    viewer: User = Depends(get_current_user),
+    viewer: User | None = Depends(get_current_user_optional),
 ) -> UserProfileOut:
     result = await db.execute(
         select(UserProfile).where(UserProfile.user_id == user_id)
@@ -178,11 +178,15 @@ async def get_public_profile(
     if user is None or not user.is_active:
         raise HTTPException(status_code=404, detail="User not found")
 
-    is_owner = viewer.id == user.id
-    is_admin = viewer.role == UserRole.admin
+    is_owner = viewer is not None and viewer.id == user.id
+    is_admin = viewer is not None and viewer.role == UserRole.admin
 
     is_enrolled_faculty = False
-    if viewer.role == UserRole.faculty and not is_owner:
+    if (
+        viewer is not None
+        and viewer.role == UserRole.faculty
+        and not is_owner
+    ):
         er = await db.execute(
             select(Enrollment.id)
             .join(Course, Course.id == Enrollment.course_id)
