@@ -428,29 +428,39 @@ QUIZ_ASSIGNMENT = {
 
 LIBRARY_BOOKS = [
     {
-        "title": "Introduction to Algorithms",
-        "author": "Cormen, Leiserson, Rivest, Stein",
-        "category": "Algorithms",
+        "title": "Think Python — How to Think Like a Computer Scientist",
+        "author": "Allen B. Downey",
+        "category": "Programming",
+        "file_url": "https://greenteapress.com/thinkpython2/thinkpython2.pdf",
+        "cover_url": "https://greenteapress.com/thinkpython2/thinkpython2_medium.jpg",
     },
     {
-        "title": "Clean Code",
-        "author": "Robert C. Martin",
-        "category": "Software Engineering",
+        "title": "Think Java — How to Think Like a Computer Scientist",
+        "author": "Allen B. Downey & Chris Mayfield",
+        "category": "Programming",
+        "file_url": "https://greenteapress.com/thinkjava7/thinkjava.pdf",
+        "cover_url": "https://greenteapress.com/thinkjava7/thinkjava_medium.jpg",
     },
     {
-        "title": "Digital Signal Processing — Principles, Algorithms & Applications",
-        "author": "Proakis & Manolakis",
+        "title": "Think DSP — Digital Signal Processing in Python",
+        "author": "Allen B. Downey",
         "category": "Signal Processing",
+        "file_url": "https://greenteapress.com/thinkdsp/thinkdsp.pdf",
+        "cover_url": "https://greenteapress.com/thinkdsp/thinkdsp_medium.jpg",
     },
     {
-        "title": "Fundamentals of Engineering Thermodynamics",
-        "author": "Moran, Shapiro, Boettner, Bailey",
-        "category": "Thermodynamics",
+        "title": "Think Stats — Exploratory Data Analysis",
+        "author": "Allen B. Downey",
+        "category": "Statistics",
+        "file_url": "https://greenteapress.com/thinkstats2/thinkstats2.pdf",
+        "cover_url": "https://greenteapress.com/thinkstats2/thinkstats2_medium.jpg",
     },
     {
-        "title": "Deep Learning",
-        "author": "Goodfellow, Bengio, Courville",
+        "title": "Dive into Deep Learning",
+        "author": "Zhang, Lipton, Li, Smola",
         "category": "Artificial Intelligence",
+        "file_url": "https://d2l.ai/d2l-en.pdf",
+        "cover_url": "https://d2l.ai/_images/front.png",
     },
 ]
 
@@ -812,25 +822,61 @@ async def seed() -> None:
                     )
                 )
 
-        # Library books
-        for b in LIBRARY_BOOKS:
-            exists = (
+        # Library books — purge legacy placeholder rows that had NULL files.
+        legacy_library = [
+            ("Introduction to Algorithms", "Cormen, Leiserson, Rivest, Stein"),
+            ("Clean Code", "Robert C. Martin"),
+            (
+                "Digital Signal Processing — Principles, Algorithms & Applications",
+                "Proakis & Manolakis",
+            ),
+            (
+                "Fundamentals of Engineering Thermodynamics",
+                "Moran, Shapiro, Boettner, Bailey",
+            ),
+            ("Deep Learning", "Goodfellow, Bengio, Courville"),
+        ]
+        for title, author in legacy_library:
+            stale = (
                 await db.execute(
-                    select(LibraryBook.id).where(
+                    select(LibraryBook).where(
+                        LibraryBook.title == title,
+                        LibraryBook.author == author,
+                        LibraryBook.file_url.is_(None),
+                    )
+                )
+            ).scalar_one_or_none()
+            if stale is not None:
+                await db.delete(stale)
+
+        for b in LIBRARY_BOOKS:
+            existing = (
+                await db.execute(
+                    select(LibraryBook).where(
                         LibraryBook.title == b["title"],
                         LibraryBook.author == b["author"],
                     )
                 )
             ).scalar_one_or_none()
-            if not exists:
+            if existing is None:
                 db.add(
                     LibraryBook(
                         title=b["title"],
                         author=b["author"],
                         category=b["category"],
+                        file_url=b.get("file_url"),
+                        cover_url=b.get("cover_url"),
                         uploaded_by=admin.id,
                     )
                 )
+            else:
+                # Backfill files/covers on rows seeded before URLs were added.
+                if existing.file_url is None and b.get("file_url"):
+                    existing.file_url = b["file_url"]
+                if existing.cover_url is None and b.get("cover_url"):
+                    existing.cover_url = b["cover_url"]
+                if existing.category != b["category"]:
+                    existing.category = b["category"]
 
         # Judge problems + testcases
         for p in JUDGE_PROBLEMS:

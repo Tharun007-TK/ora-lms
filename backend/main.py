@@ -85,8 +85,22 @@ app.include_router(notifications_router.router)
 app.include_router(profile_router.router)
 app.include_router(calendar_router.router)
 app.include_router(coding_assessments_router.router)
-app.include_router(
-    coding_assessments_router.router,
-    prefix="/api",
-    include_in_schema=False,
-)
+
+# /api alias mounts for deployments where the frontend sets
+# NEXT_PUBLIC_API_URL to the backend origin and prefixes requests with `/api`.
+for _aliased in (
+    auth_router,
+    users_router,
+    courses_router,
+    notes_router,
+    assignments_router,
+    library_router,
+    college_router,
+    ai_router,
+    judge_router,
+    notifications_router,
+    profile_router,
+    calendar_router,
+    coding_assessments_router,
+):
+    app.include_router(_aliased.router, prefix="/api", include_in_schema=False)
