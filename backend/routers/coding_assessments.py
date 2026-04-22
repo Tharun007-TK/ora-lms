@@ -38,7 +38,7 @@ from schemas.requests import (
     MessageResponse,
     PracticeStats,
 )
-from services import judge_service
+from services import judge_service, notification_service
 
 
 router = APIRouter(prefix="/coding-assessments", tags=["coding-assessments"])
@@ -248,6 +248,45 @@ async def create_assessment(
         )
 
     await db.commit()
+
+    # Notify students. Graded -> enrolled in the course. Practice -> every student.
+    if not assessment.is_practice and assessment.course_id is not None:
+        enrolled = await db.execute(
+            select(Enrollment.student_id).where(
+                Enrollment.course_id == assessment.course_id
+            )
+        )
+        student_ids = [row[0] for row in enrolled.all()]
+        if student_ids:
+            due_part = (
+                f" · due {assessment.due_date.isoformat()}"
+                if assessment.due_date
+                else ""
+            )
+            await notification_service.notify(
+                db,
+                user_ids=student_ids,
+                title=f"New coding assessment: {assessment.title}",
+                body=f"Max score {assessment.max_score}{due_part}",
+            )
+    elif assessment.is_practice:
+        all_students = await db.execute(
+            select(User.id).where(User.role == UserRole.student)
+        )
+        student_ids = [row[0] for row in all_students.all()]
+        if student_ids:
+            diff_part = (
+                f" · {assessment.difficulty.value}"
+                if assessment.difficulty is not None
+                and hasattr(assessment.difficulty, "value")
+                else ""
+            )
+            await notification_service.notify(
+                db,
+                user_ids=student_ids,
+                title=f"New practice problem: {assessment.title}",
+                body=f"{assessment.points} pts{diff_part}",
+            )
 
     reloaded = await db.execute(
         select(CodingAssessment)

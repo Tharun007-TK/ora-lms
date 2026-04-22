@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 import { AIAssistant } from '@/components/ai-assistant';
-import { Button } from '@/components/ora';
+import { Badge, Button } from '@/components/ora';
 import {
   Card,
   CardContent,
@@ -13,7 +13,12 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ora';
-import { courses, type Course } from '@/lib/api';
+import {
+  coding,
+  courses,
+  type CodingAssessmentBrief,
+  type Course,
+} from '@/lib/api';
 
 export default function StudentCourseDetailPage() {
   const params = useParams<{ id: string }>();
@@ -21,6 +26,7 @@ export default function StudentCourseDetailPage() {
   const id = Number(params.id);
 
   const [course, setCourse] = useState<Course | null>(null);
+  const [codingList, setCodingList] = useState<CodingAssessmentBrief[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   const load = async () => {
@@ -32,8 +38,19 @@ export default function StudentCourseDetailPage() {
     }
   };
 
+  const loadCoding = async () => {
+    try {
+      setCodingList(await coding.listForCourse(id));
+    } catch {
+      setCodingList([]);
+    }
+  };
+
   useEffect(() => {
-    if (Number.isFinite(id)) load();
+    if (Number.isFinite(id)) {
+      load();
+      loadCoding();
+    }
   }, [id]);
 
   if (error) return <p className="text-sm text-[var(--danger-fg)]">{error}</p>;
@@ -110,6 +127,50 @@ export default function StudentCourseDetailPage() {
           </CardContent>
         </Card>
       </div>
+
+      {course.enrolled && codingList.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Coding assessments</CardTitle>
+            <CardDescription>
+              Graded coding problems for this course.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {codingList.map((c) => {
+              const overdue =
+                c.due_date && new Date(c.due_date).getTime() < Date.now();
+              const attempts = c.attempts_used ?? 0;
+              return (
+                <Link
+                  key={c.id}
+                  href={`/student/practice/${c.id}`}
+                  className="focus-ora flex items-center justify-between rounded-md border-hair bg-[var(--surface-raised)] px-3 py-2 transition-colors hover:border-[var(--ember)]"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium">{c.title}</p>
+                    <p className="t-caption text-[var(--text-secondary)]">
+                      {c.max_score} max ·{' '}
+                      {c.due_date
+                        ? `due ${new Date(c.due_date).toLocaleDateString()}`
+                        : 'no due date'}{' '}
+                      · {attempts}/{c.max_attempts} attempts
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-2">
+                    {overdue && <Badge tone="danger">Overdue</Badge>}
+                    {c.best_score != null && (
+                      <Badge tone="success">
+                        {c.best_score}/{c.max_score}
+                      </Badge>
+                    )}
+                  </div>
+                </Link>
+              );
+            })}
+          </CardContent>
+        </Card>
+      )}
 
       {course.enrolled && <AIAssistant courseId={course.id} />}
     </div>
