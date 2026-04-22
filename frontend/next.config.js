@@ -9,6 +9,14 @@ const withPWA = require('@ducanh2912/next-pwa').default({
 const nextConfig = {
   reactStrictMode: true,
   transpilePackages: ['tailwind-merge'],
+  async rewrites() {
+    return [
+      {
+        source: '/api/:path*',
+        destination: 'https://ora-lms.onrender.com/:path*',
+      },
+    ];
+  },
 };
 
 module.exports = withPWA(nextConfig);
