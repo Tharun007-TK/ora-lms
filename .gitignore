@@ -16,3 +16,6 @@ backend/ora-*.png
 
 # Logs
 *.log
+
+ora-lms.env
+vercel.env
