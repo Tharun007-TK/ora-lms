@@ -369,7 +369,7 @@ export async function apiUpload<T = unknown>(
 export function fileUrl(url: string | null | undefined): string | null {
   if (!url) return null;
   if (url.startsWith('http://') || url.startsWith('https://')) return url;
-  if (url.startsWith('/')) return `${API_URL}${url}`;
+  if (url.startsWith('/')) return `${API_URL}/api${url}`;
   return url;
 }
 
@@ -468,7 +468,7 @@ export const courses = {
       studentIds && studentIds.length > 0
         ? `?student_ids=${studentIds.join(',')}`
         : '';
-    return `${API_URL}/courses/${id}/performance.xlsx${qs}`;
+    return `${API_URL}/api/courses/${id}/performance.xlsx${qs}`;
   },
 };
 
@@ -873,7 +873,7 @@ export interface JudgeSubmitResult {
 export const coding = {
   listForCourse: (courseId: number) =>
     apiFetch<CodingAssessmentBrief[]>(
-      `/api/coding-assessments/course/${courseId}`,
+      `/coding-assessments/course/${courseId}`,
     ),
   listPractice: (opts?: { difficulty?: CodingDifficulty; language?: CodingLanguage }) => {
     const params = new URLSearchParams();
@@ -881,7 +881,7 @@ export const coding = {
     if (opts?.language) params.set('language', opts.language);
     const qs = params.toString();
     return apiFetch<CodingAssessmentBrief[]>(
-      `/api/coding-assessments/practice${qs ? `?${qs}` : ''}`,
+      `/coding-assessments/practice${qs ? `?${qs}` : ''}`,
     );
   },
   listMine: (opts?: { isPractice?: boolean }) => {
@@ -890,45 +890,45 @@ export const coding = {
       params.set('is_practice', String(opts.isPractice));
     const qs = params.toString();
     return apiFetch<CodingAssessmentBrief[]>(
-      `/api/coding-assessments/mine${qs ? `?${qs}` : ''}`,
+      `/coding-assessments/mine${qs ? `?${qs}` : ''}`,
     );
   },
   get: (id: number) =>
-    apiFetch<CodingAssessment>(`/api/coding-assessments/${id}`),
+    apiFetch<CodingAssessment>(`/coding-assessments/${id}`),
   create: (body: CodingAssessmentCreatePayload) =>
-    apiFetch<CodingAssessment>('/api/coding-assessments', {
+    apiFetch<CodingAssessment>('/coding-assessments', {
       method: 'POST',
       body: JSON.stringify(body),
     }),
   update: (id: number, body: Partial<CodingAssessmentCreatePayload>) =>
-    apiFetch<CodingAssessment>(`/api/coding-assessments/${id}`, {
+    apiFetch<CodingAssessment>(`/coding-assessments/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(body),
     }),
   remove: (id: number) =>
-    apiFetch<{ detail: string }>(`/api/coding-assessments/${id}`, {
+    apiFetch<{ detail: string }>(`/coding-assessments/${id}`, {
       method: 'DELETE',
     }),
   run: (id: number, body: { language: CodingLanguage; source_code: string }) =>
-    apiFetch<CodingRunResult>(`/api/coding-assessments/${id}/run`, {
+    apiFetch<CodingRunResult>(`/coding-assessments/${id}/run`, {
       method: 'POST',
       body: JSON.stringify(body),
     }),
   submit: (id: number, body: { language: CodingLanguage; source_code: string }) =>
-    apiFetch<CodingSubmission>(`/api/coding-assessments/${id}/submit`, {
+    apiFetch<CodingSubmission>(`/coding-assessments/${id}/submit`, {
       method: 'POST',
       body: JSON.stringify(body),
     }),
   mySubmissions: (id: number) =>
     apiFetch<CodingSubmission[]>(
-      `/api/coding-assessments/${id}/submissions/me`,
+      `/coding-assessments/${id}/submissions/me`,
     ),
   allSubmissions: (id: number) =>
-    apiFetch<CodingSubmission[]>(`/api/coding-assessments/${id}/submissions`),
+    apiFetch<CodingSubmission[]>(`/coding-assessments/${id}/submissions`),
   leaderboard: (id: number) =>
-    apiFetch<CodingLeaderboardEntry[]>(`/api/coding-assessments/${id}/leaderboard`),
+    apiFetch<CodingLeaderboardEntry[]>(`/coding-assessments/${id}/leaderboard`),
   practiceStats: () =>
-    apiFetch<PracticeStats>('/api/coding-assessments/practice/stats'),
+    apiFetch<PracticeStats>('/coding-assessments/practice/stats'),
 };
 
 const CODING_LANGUAGE_LABELS: Record<CodingLanguage, string> = {
