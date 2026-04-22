@@ -306,7 +306,7 @@ export interface ApiError extends Error {
 }
 
 export const API_URL = (
-  process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+  process.env.NEXT_PUBLIC_API_URL || ''
 ).replace(/\/+$/, '');
 
 function buildError(status: number, detail: string): ApiError {
@@ -341,7 +341,7 @@ export async function apiFetch<T = unknown>(
   path: string,
   options: RequestInit = {},
 ): Promise<T> {
-  const res = await fetch(`${API_URL}${path}`, {
+  const res = await fetch(`${API_URL}/api${path}`, {
     ...options,
     credentials: 'include',
     headers: {
@@ -357,7 +357,7 @@ export async function apiUpload<T = unknown>(
   body: FormData,
   method: 'POST' | 'PATCH' | 'PUT' = 'POST',
 ): Promise<T> {
-  const res = await fetch(`${API_URL}${path}`, {
+  const res = await fetch(`${API_URL}/api${path}`, {
     method,
     credentials: 'include',
     body,
@@ -1068,3 +1068,4 @@ export const college = {
   removeDepartment: (id: number) =>
     apiFetch<{ detail: string }>(`/college/departments/${id}`, { method: 'DELETE' }),
 };
+
