@@ -775,6 +775,7 @@ export interface CodingAssessmentBrief {
   is_practice: boolean;
   points: number;
   difficulty: CodingDifficulty | null;
+  duration_minutes: number | null;
   created_at: string;
   attempts_used: number | null;
   best_score: number | null;
@@ -797,6 +798,7 @@ export interface CodingAssessment {
   is_practice: boolean;
   points: number;
   difficulty: CodingDifficulty | null;
+  duration_minutes: number | null;
   created_at: string;
   updated_at: string;
   test_cases_faculty: CodingTestCaseFaculty[] | null;
@@ -824,6 +826,12 @@ export interface CodingSubmission {
   score: number;
   status: CodingSubmissionStatus;
   test_case_results: CodingTestCaseResult[] | null;
+  passed_count: number | null;
+  total_count: number | null;
+  time_ms: number | null;
+  memory_kb: number | null;
+  tab_switches: number;
+  auto_submitted: boolean;
   submitted_at: string;
 }
 
@@ -841,6 +849,7 @@ export interface CodingAssessmentCreatePayload {
   is_practice?: boolean;
   points?: number;
   difficulty?: CodingDifficulty | null;
+  duration_minutes?: number | null;
   test_cases: CodingTestCaseInput[];
 }
 
@@ -936,7 +945,15 @@ export const coding = {
       method: 'POST',
       body: JSON.stringify(body),
     }),
-  submit: (id: number, body: { language: CodingLanguage; source_code: string }) =>
+  submit: (
+    id: number,
+    body: {
+      language: CodingLanguage;
+      source_code: string;
+      tab_switches?: number;
+      auto_submitted?: boolean;
+    },
+  ) =>
     apiFetch<CodingSubmission>(`/coding-assessments/${id}/submit`, {
       method: 'POST',
       body: JSON.stringify(body),

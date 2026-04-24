@@ -114,6 +114,7 @@ def _serialize_brief(
         is_practice=a.is_practice,
         points=a.points,
         difficulty=a.difficulty,
+        duration_minutes=a.duration_minutes,
         created_at=a.created_at,
         attempts_used=attempts_used,
         best_score=best_score,
@@ -138,6 +139,7 @@ def _serialize_out_faculty(a: CodingAssessment) -> CodingAssessmentOut:
         is_practice=a.is_practice,
         points=a.points,
         difficulty=a.difficulty,
+        duration_minutes=a.duration_minutes,
         created_at=a.created_at,
         updated_at=a.updated_at,
         test_cases_faculty=[
@@ -174,6 +176,7 @@ def _serialize_out_student(a: CodingAssessment) -> CodingAssessmentOut:
         is_practice=a.is_practice,
         points=a.points,
         difficulty=a.difficulty,
+        duration_minutes=a.duration_minutes,
         created_at=a.created_at,
         updated_at=a.updated_at,
         test_cases_faculty=None,
@@ -231,6 +234,7 @@ async def create_assessment(
         is_practice=body.is_practice,
         points=body.points if body.is_practice else 0,
         difficulty=body.difficulty if body.is_practice else None,
+        duration_minutes=body.duration_minutes,
     )
     db.add(assessment)
     await db.flush()
@@ -597,9 +601,16 @@ async def submit_code(
         source_code=body.source_code,
         score=0,
         status=CodingSubmissionStatus.running,
+        tab_switches=body.tab_switches,
+        auto_submitted=body.auto_submitted,
     )
     db.add(submission)
     await db.flush()
+
+    total_count = len(a.test_cases)
+    passed_count = 0
+    max_time_ms: int | None = None
+    max_memory_kb: int | None = None
 
     try:
         result = await judge_service.evaluate_submission(
@@ -612,9 +623,22 @@ async def submit_code(
             else a.scoring_mode,
             time_limit_seconds=a.time_limit_seconds,
         )
-        submission.score = result.score
-        submission.status = CodingSubmissionStatus.completed
         submission.test_case_results = result.test_case_results
+        for r in result.test_case_results:
+            if r.get("passed"):
+                passed_count += 1
+            t = r.get("time_ms")
+            if isinstance(t, (int, float)):
+                max_time_ms = int(t) if max_time_ms is None else max(max_time_ms, int(t))
+            m = r.get("memory_kb")
+            if isinstance(m, (int, float)):
+                max_memory_kb = int(m) if max_memory_kb is None else max(max_memory_kb, int(m))
+        # Points based on testcases passed: proportional to pass ratio.
+        if total_count > 0:
+            submission.score = round(a.max_score * passed_count / total_count)
+        else:
+            submission.score = 0
+        submission.status = CodingSubmissionStatus.completed
     except HTTPException:
         submission.status = CodingSubmissionStatus.error
         submission.test_case_results = None
@@ -623,21 +647,30 @@ async def submit_code(
         submission.status = CodingSubmissionStatus.error
         submission.test_case_results = [{"error": str(exc)}]
 
-    if a.is_practice and submission.score >= a.max_score and a.max_score > 0:
+    submission.passed_count = passed_count
+    submission.total_count = total_count
+    submission.time_ms = max_time_ms
+    submission.memory_kb = max_memory_kb
+
+    if a.is_practice and total_count > 0 and passed_count > 0 and a.points > 0:
+        earned = round(a.points * passed_count / total_count)
         existing = await db.execute(
             select(PracticeProgress).where(
                 PracticeProgress.student_id == user.id,
                 PracticeProgress.assessment_id == a.id,
             )
         )
-        if existing.scalar_one_or_none() is None:
+        prog = existing.scalar_one_or_none()
+        if prog is None:
             db.add(
                 PracticeProgress(
                     student_id=user.id,
                     assessment_id=a.id,
-                    points_earned=a.points,
+                    points_earned=earned,
                 )
             )
+        elif earned > prog.points_earned:
+            prog.points_earned = earned
 
     await db.commit()
     await db.refresh(submission)
@@ -652,6 +685,12 @@ async def submit_code(
         score=submission.score,
         status=submission.status,
         test_case_results=_redact_results_for_student(submission.test_case_results),
+        passed_count=submission.passed_count,
+        total_count=submission.total_count,
+        time_ms=submission.time_ms,
+        memory_kb=submission.memory_kb,
+        tab_switches=submission.tab_switches,
+        auto_submitted=submission.auto_submitted,
         submitted_at=submission.submitted_at,
     )
 
@@ -687,6 +726,12 @@ async def list_my_submissions(
             score=s.score,
             status=s.status,
             test_case_results=_redact_results_for_student(s.test_case_results),
+            passed_count=s.passed_count,
+            total_count=s.total_count,
+            time_ms=s.time_ms,
+            memory_kb=s.memory_kb,
+            tab_switches=s.tab_switches,
+            auto_submitted=s.auto_submitted,
             submitted_at=s.submitted_at,
         )
         for s in items
@@ -722,6 +767,12 @@ async def list_all_submissions(
             score=s.score,
             status=s.status,
             test_case_results=s.test_case_results,
+            passed_count=s.passed_count,
+            total_count=s.total_count,
+            time_ms=s.time_ms,
+            memory_kb=s.memory_kb,
+            tab_switches=s.tab_switches,
+            auto_submitted=s.auto_submitted,
             submitted_at=s.submitted_at,
         )
         for s, name in rows

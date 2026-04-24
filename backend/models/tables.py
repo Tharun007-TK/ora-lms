@@ -544,6 +544,7 @@ class CodingAssessment(Base):
     difficulty: Mapped[CodingDifficulty | None] = mapped_column(
         SAEnum(CodingDifficulty, name="coding_difficulty"), index=True
     )
+    duration_minutes: Mapped[int | None] = mapped_column(Integer, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
@@ -608,6 +609,14 @@ class CodingSubmission(Base):
         nullable=False,
     )
     test_case_results: Mapped[list | None] = mapped_column(JSONB)
+    tab_switches: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    auto_submitted: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False
+    )
+    passed_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    total_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    time_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    memory_kb: Mapped[int | None] = mapped_column(Integer, nullable=True)
     submitted_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

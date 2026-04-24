@@ -49,8 +49,9 @@ export default function NewCodingAssessmentPage() {
   const [languages, setLanguages] = useState<CodingLanguage[]>(['python']);
   const [timeLimit, setTimeLimit] = useState(2);
   const [memLimit, setMemLimit] = useState(256);
+  const [durationMinutes, setDurationMinutes] = useState<number | ''>(60);
   const [maxScore, setMaxScore] = useState(100);
-  const [scoring, setScoring] = useState<CodingScoringMode>('all_or_nothing');
+  const [scoring, setScoring] = useState<CodingScoringMode>('partial');
   const [due, setDue] = useState('');
   const [maxAttempts, setMaxAttempts] = useState(3);
   const [isPractice, setIsPractice] = useState(false);
@@ -105,6 +106,11 @@ export default function NewCodingAssessmentPage() {
         is_practice: isPractice,
         points: isPractice ? points : 0,
         difficulty: isPractice ? difficulty : null,
+        duration_minutes: isPractice
+          ? null
+          : typeof durationMinutes === 'number' && durationMinutes > 0
+          ? durationMinutes
+          : null,
         test_cases: clean.map((t, i) => ({
           input: t.input,
           expected_output: t.expected_output,
@@ -229,6 +235,26 @@ export default function NewCodingAssessmentPage() {
               />
             </div>
           </div>
+
+          {!isPractice && (
+            <div className="space-y-2">
+              <Label htmlFor="c-dur">Exam duration (minutes)</Label>
+              <Input
+                id="c-dur"
+                type="number"
+                min={1}
+                max={600}
+                value={durationMinutes}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setDurationMinutes(v === '' ? '' : Number(v) || 1);
+                }}
+              />
+              <p className="t-caption text-[var(--text-muted)]">
+                Countdown shown to student in fullscreen. Auto-submits at zero.
+              </p>
+            </div>
+          )}
 
           {isPractice ? (
             <div className="grid gap-4 sm:grid-cols-2">

@@ -612,6 +612,7 @@ class CodingAssessmentCreate(BaseModel):
     is_practice: bool = False
     points: int = Field(default=0, ge=0, le=1000)
     difficulty: CodingDifficulty | None = None
+    duration_minutes: int | None = Field(default=None, ge=1, le=600)
     test_cases: list[CodingTestCaseIn] = Field(min_length=1)
 
     @model_validator(mode="after")
@@ -647,6 +648,7 @@ class CodingAssessmentUpdate(BaseModel):
     max_attempts: int | None = Field(default=None, ge=1, le=50)
     difficulty: CodingDifficulty | None = None
     points: int | None = Field(default=None, ge=0, le=1000)
+    duration_minutes: int | None = Field(default=None, ge=1, le=600)
 
 
 class CodingAssessmentBrief(BaseModel):
@@ -664,6 +666,7 @@ class CodingAssessmentBrief(BaseModel):
     is_practice: bool
     points: int
     difficulty: CodingDifficulty | None = None
+    duration_minutes: int | None = None
     created_at: datetime
     attempts_used: int | None = None
     best_score: int | None = None
@@ -688,6 +691,7 @@ class CodingAssessmentOut(BaseModel):
     is_practice: bool
     points: int
     difficulty: CodingDifficulty | None = None
+    duration_minutes: int | None = None
     created_at: datetime
     updated_at: datetime
     # Test cases differ by role — faculty gets full, student gets redacted.
@@ -698,6 +702,8 @@ class CodingAssessmentOut(BaseModel):
 class CodingSubmitBody(BaseModel):
     language: str
     source_code: str = Field(min_length=1)
+    tab_switches: int = Field(default=0, ge=0, le=1000)
+    auto_submitted: bool = False
 
 
 class CodingSubmissionOut(BaseModel):
@@ -713,6 +719,12 @@ class CodingSubmissionOut(BaseModel):
     status: CodingSubmissionStatus
     # Test case results redacted for students on hidden cases (input/stdout stripped).
     test_case_results: list | None = None
+    passed_count: int | None = None
+    total_count: int | None = None
+    time_ms: int | None = None
+    memory_kb: int | None = None
+    tab_switches: int = 0
+    auto_submitted: bool = False
     submitted_at: datetime
 
 

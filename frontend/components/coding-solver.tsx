@@ -2,7 +2,7 @@
 
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import {
   Badge,
@@ -38,6 +38,17 @@ const DEFAULT_STARTER: Record<CodingLanguage, string> = {
   javascript: '// Read stdin via process.stdin, log output.\n',
 };
 
+const MAX_TAB_SWITCHES = 3;
+
+function formatClock(totalSeconds: number): string {
+  if (totalSeconds < 0) totalSeconds = 0;
+  const h = Math.floor(totalSeconds / 3600);
+  const m = Math.floor((totalSeconds % 3600) / 60);
+  const s = totalSeconds % 60;
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return h > 0 ? `${pad(h)}:${pad(m)}:${pad(s)}` : `${pad(m)}:${pad(s)}`;
+}
+
 export function CodingSolver({
   assessmentId,
   backHref,
@@ -56,7 +67,34 @@ export function CodingSolver({
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const load = async () => {
+  const [examStarted, setExamStarted] = useState(false);
+  const [examEnded, setExamEnded] = useState(false);
+  const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
+  const [tabSwitches, setTabSwitches] = useState(0);
+  const [warning, setWarning] = useState<string | null>(null);
+
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const tabSwitchesRef = useRef(0);
+  const examStartedRef = useRef(false);
+  const examEndedRef = useRef(false);
+  const submittingRef = useRef(false);
+
+  useEffect(() => {
+    tabSwitchesRef.current = tabSwitches;
+  }, [tabSwitches]);
+  useEffect(() => {
+    examStartedRef.current = examStarted;
+  }, [examStarted]);
+  useEffect(() => {
+    examEndedRef.current = examEnded;
+  }, [examEnded]);
+  useEffect(() => {
+    submittingRef.current = submitting;
+  }, [submitting]);
+
+  const isExamMode = !!assessment && !assessment.is_practice;
+
+  const load = useCallback(async () => {
     try {
       const [a, subs] = await Promise.all([
         coding.get(assessmentId),
@@ -74,12 +112,140 @@ export function CodingSolver({
     } finally {
       setLoading(false);
     }
-  };
+  }, [assessmentId]);
 
   useEffect(() => {
     if (Number.isFinite(assessmentId)) load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [assessmentId]);
+  }, [assessmentId, load]);
+
+  const exitFullscreen = useCallback(() => {
+    if (typeof document === 'undefined') return;
+    if (document.fullscreenElement) {
+      void document.exitFullscreen().catch(() => {});
+    }
+  }, []);
+
+  const submitInternal = useCallback(
+    async (opts: { auto: boolean; reason?: string }) => {
+      if (!assessment) return;
+      if (submittingRef.current) return;
+      if (examEndedRef.current) return;
+      setError(null);
+      if (!source.trim()) {
+        setError('Source code is empty.');
+        return;
+      }
+      setSubmitting(true);
+      try {
+        const sub = await coding.submit(assessmentId, {
+          language,
+          source_code: source,
+          tab_switches: tabSwitchesRef.current,
+          auto_submitted: opts.auto,
+        });
+        setLatest(sub);
+        setRunResult(null);
+        setExamEnded(true);
+        examEndedRef.current = true;
+        if (opts.reason) setWarning(opts.reason);
+        exitFullscreen();
+        await load();
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Submission failed');
+      } finally {
+        setSubmitting(false);
+      }
+    },
+    [assessment, assessmentId, language, source, exitFullscreen, load],
+  );
+
+  useEffect(() => {
+    if (!examStarted || examEnded || secondsLeft === null) return;
+    if (secondsLeft <= 0) {
+      void submitInternal({ auto: true, reason: 'Time up — auto-submitted.' });
+      return;
+    }
+    const t = window.setTimeout(() => {
+      setSecondsLeft((v) => (v === null ? null : v - 1));
+    }, 1000);
+    return () => window.clearTimeout(t);
+  }, [examStarted, examEnded, secondsLeft, submitInternal]);
+
+  useEffect(() => {
+    if (!examStarted || examEnded) return;
+
+    const onVisibility = () => {
+      if (document.visibilityState !== 'hidden') return;
+      const next = tabSwitchesRef.current + 1;
+      tabSwitchesRef.current = next;
+      setTabSwitches(next);
+      if (next >= MAX_TAB_SWITCHES) {
+        void submitInternal({
+          auto: true,
+          reason: `Tab switched ${next} times — auto-submitted.`,
+        });
+      } else {
+        setWarning(
+          `Warning ${next}/${MAX_TAB_SWITCHES}: leaving the tab is not allowed. Test auto-submits after ${MAX_TAB_SWITCHES} switches.`,
+        );
+      }
+    };
+
+    const onFullscreenChange = () => {
+      if (examEndedRef.current) return;
+      if (!document.fullscreenElement) {
+        setWarning(
+          'Fullscreen exited. Re-enter fullscreen to continue. Repeated exits count as tab switches.',
+        );
+        const next = tabSwitchesRef.current + 1;
+        tabSwitchesRef.current = next;
+        setTabSwitches(next);
+        if (next >= MAX_TAB_SWITCHES) {
+          void submitInternal({
+            auto: true,
+            reason: `Fullscreen exited ${next} times — auto-submitted.`,
+          });
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', onVisibility);
+    document.addEventListener('fullscreenchange', onFullscreenChange);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibility);
+      document.removeEventListener('fullscreenchange', onFullscreenChange);
+    };
+  }, [examStarted, examEnded, submitInternal]);
+
+  useEffect(() => {
+    return () => {
+      if (typeof document !== 'undefined' && document.fullscreenElement) {
+        void document.exitFullscreen().catch(() => {});
+      }
+    };
+  }, []);
+
+  const requestFullscreen = useCallback(async () => {
+    if (!containerRef.current) return;
+    if (document.fullscreenElement) return;
+    try {
+      await containerRef.current.requestFullscreen();
+    } catch {
+      // fullscreen refused or unsupported — proceed without it.
+    }
+  }, []);
+
+  const startExam = useCallback(async () => {
+    if (!assessment) return;
+    await requestFullscreen();
+    const mins = assessment.duration_minutes ?? 60;
+    setSecondsLeft(mins * 60);
+    setTabSwitches(0);
+    tabSwitchesRef.current = 0;
+    setWarning(null);
+    setExamStarted(true);
+    examStartedRef.current = true;
+  }, [assessment, requestFullscreen]);
 
   const runOnly = async () => {
     setError(null);
@@ -101,27 +267,7 @@ export function CodingSolver({
     }
   };
 
-  const submit = async () => {
-    setError(null);
-    if (!source.trim()) {
-      setError('Source code is empty.');
-      return;
-    }
-    setSubmitting(true);
-    try {
-      const sub = await coding.submit(assessmentId, {
-        language,
-        source_code: source,
-      });
-      setLatest(sub);
-      setRunResult(null);
-      await load();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Submission failed');
-    } finally {
-      setSubmitting(false);
-    }
-  };
+  const submitManual = () => submitInternal({ auto: false });
 
   const onLanguageChange = (l: CodingLanguage) => {
     setLanguage(l);
@@ -145,17 +291,146 @@ export function CodingSolver({
     : Math.max(0, assessment.max_attempts - attemptsUsed);
   const canSubmit =
     !submitting &&
+    !examEnded &&
     (assessment.is_practice ||
       (attemptsLeft != null && attemptsLeft > 0));
 
+  if (isExamMode && !examStarted && !examEnded) {
+    const duration = assessment.duration_minutes ?? 60;
+    const noAttempts = attemptsLeft != null && attemptsLeft <= 0;
+    return (
+      <div className="mx-auto max-w-2xl space-y-4">
+        <Link
+          href={backHref}
+          className="text-xs text-[var(--text-secondary)] hover:underline"
+        >
+          ← Back
+        </Link>
+        <Card>
+          <CardHeader>
+            <CardTitle>{assessment.title}</CardTitle>
+            <CardDescription>
+              {attemptsLeft} / {assessment.max_attempts} attempts left
+              {assessment.due_date &&
+                ` · due ${new Date(assessment.due_date).toLocaleString()}`}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <ul className="list-disc space-y-1 pl-5 t-body text-[var(--text-primary)]">
+              <li>Test runs in fullscreen. Exit counts against you.</li>
+              <li>
+                Duration: <strong>{duration} minutes</strong>. Timer auto-submits
+                at zero.
+              </li>
+              <li>
+                Tab / window switches are counted. After{' '}
+                <strong>{MAX_TAB_SWITCHES} switches</strong> the test
+                auto-submits.
+              </li>
+              <li>Score = testcases passed / total testcases × max score.</li>
+              <li>Submission shows passed count, time taken, memory used.</li>
+            </ul>
+            {noAttempts && (
+              <p className="t-caption text-[var(--danger-fg)]">
+                No attempts remaining.
+              </p>
+            )}
+            <div className="flex justify-end gap-2">
+              <Link href={backHref}>
+                <Button variant="secondary">Cancel</Button>
+              </Link>
+              <Button onClick={startExam} disabled={noAttempts}>
+                Start exam
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {latest && (
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base">Previous submission</CardTitle>
+                <Badge
+                  tone={
+                    latest.score === assessment.max_score
+                      ? 'success'
+                      : latest.score > 0
+                      ? 'warning'
+                      : 'danger'
+                  }
+                >
+                  {latest.score} / {assessment.max_score}
+                </Badge>
+              </div>
+              <CardDescription>
+                {new Date(latest.submitted_at).toLocaleString()} ·{' '}
+                {latest.status}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <SubmissionStats submission={latest} />
+            </CardContent>
+          </Card>
+        )}
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-4">
-      <Link
-        href={backHref}
-        className="text-xs text-[var(--text-secondary)] hover:underline"
-      >
-        ← Back
-      </Link>
+    <div
+      ref={containerRef}
+      className="space-y-4 bg-[var(--surface-base)]"
+      style={
+        examStarted && !examEnded
+          ? { minHeight: '100vh', padding: '1rem' }
+          : undefined
+      }
+    >
+      {isExamMode && examStarted && !examEnded && (
+        <div className="sticky top-0 z-20 -mx-4 -mt-4 flex flex-wrap items-center justify-between gap-2 border-b-hair bg-[var(--surface-raised)] px-4 py-2">
+          <div className="flex items-center gap-3">
+            <span className="font-mono text-lg font-semibold text-[var(--ember)]">
+              ⏱ {secondsLeft !== null ? formatClock(secondsLeft) : '--:--'}
+            </span>
+            <Badge
+              tone={
+                tabSwitches >= MAX_TAB_SWITCHES - 1
+                  ? 'danger'
+                  : tabSwitches > 0
+                  ? 'warning'
+                  : 'success'
+              }
+            >
+              Tab switches {tabSwitches} / {MAX_TAB_SWITCHES}
+            </Badge>
+          </div>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={submitManual}
+            disabled={!canSubmit}
+            loading={submitting}
+          >
+            End & submit
+          </Button>
+        </div>
+      )}
+
+      {!examStarted && (
+        <Link
+          href={backHref}
+          className="text-xs text-[var(--text-secondary)] hover:underline"
+        >
+          ← Back
+        </Link>
+      )}
+
+      {warning && (
+        <div className="rounded-md border-hair bg-[var(--warning-bg)] px-3 py-2 t-caption text-[var(--warning-fg)]">
+          {warning}
+        </div>
+      )}
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
         <Card className="lg:max-h-[calc(100vh-8rem)] lg:overflow-auto">
@@ -239,6 +514,7 @@ export function CodingSolver({
                     onChange={(e) =>
                       onLanguageChange(e.target.value as CodingLanguage)
                     }
+                    disabled={examEnded}
                     className="rounded-md border-hair bg-[var(--surface-raised)] px-2 py-1 t-body focus-ora"
                   >
                     {assessment.allowed_languages.map((l) => (
@@ -252,13 +528,13 @@ export function CodingSolver({
                   <Button
                     variant="secondary"
                     onClick={runOnly}
-                    disabled={running || submitting}
+                    disabled={running || submitting || examEnded}
                     loading={running}
                   >
                     {running ? 'Running…' : 'Run'}
                   </Button>
                   <Button
-                    onClick={submit}
+                    onClick={submitManual}
                     disabled={!canSubmit}
                     loading={submitting}
                   >
@@ -280,6 +556,7 @@ export function CodingSolver({
                     fontSize: 14,
                     scrollBeyondLastLine: false,
                     automaticLayout: true,
+                    readOnly: examEnded,
                   }}
                 />
               </div>
@@ -364,9 +641,11 @@ export function CodingSolver({
                 <CardDescription>
                   {new Date(latest.submitted_at).toLocaleString()} ·{' '}
                   {latest.status}
+                  {latest.auto_submitted ? ' · auto-submitted' : ''}
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-2">
+              <CardContent className="space-y-3">
+                <SubmissionStats submission={latest} />
                 {latest.test_case_results?.map((r, i) => (
                   <div
                     key={r.test_case_id}
@@ -384,6 +663,9 @@ export function CodingSolver({
                       {r.time_ms != null && (
                         <p className="t-caption text-[var(--text-muted)]">
                           {r.time_ms} ms
+                          {r.memory_kb != null
+                            ? ` · ${r.memory_kb} kb`
+                            : ''}
                         </p>
                       )}
                       {!r.is_hidden && r.stderr && (
@@ -399,11 +681,57 @@ export function CodingSolver({
                     </div>
                   </div>
                 ))}
+                {examEnded && (
+                  <div className="flex justify-end">
+                    <Link href={backHref}>
+                      <Button variant="secondary">Back to assignments</Button>
+                    </Link>
+                  </div>
+                )}
               </CardContent>
             </Card>
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+function SubmissionStats({ submission }: { submission: CodingSubmission }) {
+  const passed =
+    submission.passed_count ??
+    submission.test_case_results?.filter((r) => r.passed).length ??
+    null;
+  const total =
+    submission.total_count ?? submission.test_case_results?.length ?? null;
+  return (
+    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+      <Stat
+        label="Testcases"
+        value={
+          passed != null && total != null ? `${passed} / ${total}` : '—'
+        }
+      />
+      <Stat
+        label="Time"
+        value={submission.time_ms != null ? `${submission.time_ms} ms` : '—'}
+      />
+      <Stat
+        label="Memory"
+        value={
+          submission.memory_kb != null ? `${submission.memory_kb} kb` : '—'
+        }
+      />
+      <Stat label="Tab switches" value={String(submission.tab_switches ?? 0)} />
+    </div>
+  );
+}
+
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-md border-hair bg-[var(--surface-sunken)] p-2">
+      <p className="t-caption text-[var(--text-muted)]">{label}</p>
+      <p className="t-body font-semibold">{value}</p>
     </div>
   );
 }
