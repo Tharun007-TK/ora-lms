@@ -145,10 +145,13 @@ export function CodingSolver({
         });
         setLatest(sub);
         setRunResult(null);
-        setExamEnded(true);
-        examEndedRef.current = true;
+        // Practice stays open for repeat attempts; graded ends after submit.
+        if (!assessment.is_practice) {
+          setExamEnded(true);
+          examEndedRef.current = true;
+          exitFullscreen();
+        }
         if (opts.reason) setWarning(opts.reason);
-        exitFullscreen();
         await load();
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Submission failed');
@@ -160,6 +163,7 @@ export function CodingSolver({
   );
 
   useEffect(() => {
+    if (!isExamMode) return;
     if (!examStarted || examEnded || secondsLeft === null) return;
     if (secondsLeft <= 0) {
       void submitInternal({ auto: true, reason: 'Time up — auto-submitted.' });
@@ -169,9 +173,10 @@ export function CodingSolver({
       setSecondsLeft((v) => (v === null ? null : v - 1));
     }, 1000);
     return () => window.clearTimeout(t);
-  }, [examStarted, examEnded, secondsLeft, submitInternal]);
+  }, [isExamMode, examStarted, examEnded, secondsLeft, submitInternal]);
 
   useEffect(() => {
+    if (!isExamMode) return;
     if (!examStarted || examEnded) return;
 
     const onVisibility = () => {
@@ -238,10 +243,12 @@ export function CodingSolver({
   const startExam = useCallback(async () => {
     if (!assessment) return;
     await requestFullscreen();
-    const mins = assessment.duration_minutes ?? 60;
-    setSecondsLeft(mins * 60);
-    setTabSwitches(0);
-    tabSwitchesRef.current = 0;
+    if (!assessment.is_practice) {
+      const mins = assessment.duration_minutes ?? 60;
+      setSecondsLeft(mins * 60);
+      setTabSwitches(0);
+      tabSwitchesRef.current = 0;
+    }
     setWarning(null);
     setExamStarted(true);
     examStartedRef.current = true;
@@ -295,7 +302,7 @@ export function CodingSolver({
     (assessment.is_practice ||
       (attemptsLeft != null && attemptsLeft > 0));
 
-  if (isExamMode && !examStarted && !examEnded) {
+  if (!examStarted && !examEnded) {
     const duration = assessment.duration_minutes ?? 60;
     const noAttempts = attemptsLeft != null && attemptsLeft <= 0;
     return (
@@ -310,25 +317,44 @@ export function CodingSolver({
           <CardHeader>
             <CardTitle>{assessment.title}</CardTitle>
             <CardDescription>
-              {attemptsLeft} / {assessment.max_attempts} attempts left
+              {assessment.is_practice
+                ? `Practice · unlimited attempts${
+                    assessment.points ? ` · ${assessment.points} pts` : ''
+                  }`
+                : `${attemptsLeft} / ${assessment.max_attempts} attempts left`}
               {assessment.due_date &&
                 ` · due ${new Date(assessment.due_date).toLocaleString()}`}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <ul className="list-disc space-y-1 pl-5 t-body text-[var(--text-primary)]">
-              <li>Test runs in fullscreen. Exit counts against you.</li>
-              <li>
-                Duration: <strong>{duration} minutes</strong>. Timer auto-submits
-                at zero.
-              </li>
-              <li>
-                Tab / window switches are counted. After{' '}
-                <strong>{MAX_TAB_SWITCHES} switches</strong> the test
-                auto-submits.
-              </li>
-              <li>Score = testcases passed / total testcases × max score.</li>
-              <li>Submission shows passed count, time taken, memory used.</li>
+              <li>Opens in fullscreen for a distraction-free editor.</li>
+              {isExamMode ? (
+                <>
+                  <li>Exit counts against you.</li>
+                  <li>
+                    Duration: <strong>{duration} minutes</strong>. Timer
+                    auto-submits at zero.
+                  </li>
+                  <li>
+                    Tab / window switches are counted. After{' '}
+                    <strong>{MAX_TAB_SWITCHES} switches</strong> the test
+                    auto-submits.
+                  </li>
+                  <li>
+                    Score = testcases passed / total testcases × max score.
+                  </li>
+                  <li>
+                    Submission shows passed count, time taken, memory used.
+                  </li>
+                </>
+              ) : (
+                <>
+                  <li>No timer. Unlimited attempts.</li>
+                  <li>Exit fullscreen any time with Esc.</li>
+                  <li>Submission shows passed count, time taken, memory used.</li>
+                </>
+              )}
             </ul>
             {noAttempts && (
               <p className="t-caption text-[var(--danger-fg)]">
@@ -340,7 +366,7 @@ export function CodingSolver({
                 <Button variant="secondary">Cancel</Button>
               </Link>
               <Button onClick={startExam} disabled={noAttempts}>
-                Start exam
+                {isExamMode ? 'Start exam' : 'Start coding'}
               </Button>
             </div>
           </CardContent>
