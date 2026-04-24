@@ -38,11 +38,8 @@ def _run_migrations() -> None:
         log.warning("alembic.ini not found at %s — skipping migrations", ini_path)
         return
     cfg = AlembicConfig(ini_path)
-    try:
-        alembic_command.upgrade(cfg, "head")
-        log.info("Alembic upgrade head completed")
-    except Exception:  # noqa: BLE001
-        log.exception("Alembic upgrade failed — continuing startup anyway")
+    alembic_command.upgrade(cfg, "head")
+    log.info("Alembic upgrade head completed")
 
 
 @asynccontextmanager
