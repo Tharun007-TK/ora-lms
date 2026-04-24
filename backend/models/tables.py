@@ -648,7 +648,32 @@ class PracticeProgress(Base):
     points_earned: Mapped[int] = mapped_column(
         Integer, nullable=False, default=0
     )
+    stars: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     solved_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+
+class UserBadge(Base):
+    __tablename__ = "user_badges"
+    __table_args__ = (
+        UniqueConstraint(
+            "user_id", "badge_key", name="uq_user_badges_user_badge"
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    badge_key: Mapped[str] = mapped_column(String(60), nullable=False)
+    assessment_id: Mapped[int | None] = mapped_column(
+        ForeignKey("coding_assessments.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    earned_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
 
@@ -688,6 +713,7 @@ __all__ = [
     "CodingTestCase",
     "CodingSubmission",
     "PracticeProgress",
+    "UserBadge",
     "Department",
     "User",
     "Course",

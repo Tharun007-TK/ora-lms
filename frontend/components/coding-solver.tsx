@@ -672,6 +672,45 @@ export function CodingSolver({
               </CardHeader>
               <CardContent className="space-y-3">
                 <SubmissionStats submission={latest} />
+                {assessment.is_practice && latest.earned_stars_now != null && (
+                  <div className="rounded-md border-hair bg-[var(--surface-sunken)] p-3">
+                    <p className="t-caption text-[var(--text-muted)]">
+                      Stars earned this submit
+                    </p>
+                    <p className="text-2xl font-semibold text-[var(--warning-fg)]">
+                      {'★'.repeat(latest.earned_stars_now)}
+                      <span className="text-[var(--text-muted)]">
+                        {'☆'.repeat(3 - latest.earned_stars_now)}
+                      </span>
+                    </p>
+                    {latest.total_stars != null && (
+                      <p className="t-caption text-[var(--text-secondary)]">
+                        Total stars: {latest.total_stars}
+                      </p>
+                    )}
+                  </div>
+                )}
+                {latest.new_badges && latest.new_badges.length > 0 && (
+                  <div className="space-y-2 rounded-md border-hair bg-[var(--surface-sunken)] p-3">
+                    <p className="t-caption text-[var(--text-muted)]">
+                      New badges unlocked
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {latest.new_badges.map((b) => (
+                        <div
+                          key={b.key}
+                          title={b.description}
+                          className="flex items-center gap-2 rounded-full border-hair bg-[var(--surface-raised)] px-3 py-1"
+                        >
+                          <span className="text-lg">{b.icon}</span>
+                          <span className="t-caption font-semibold">
+                            {b.label}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 {latest.test_case_results?.map((r, i) => (
                   <div
                     key={r.test_case_id}

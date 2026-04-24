@@ -671,6 +671,7 @@ class CodingAssessmentBrief(BaseModel):
     attempts_used: int | None = None
     best_score: int | None = None
     solved: bool | None = None
+    stars: int | None = None
 
 
 class CodingAssessmentOut(BaseModel):
@@ -725,12 +726,31 @@ class CodingSubmissionOut(BaseModel):
     memory_kb: int | None = None
     tab_switches: int = 0
     auto_submitted: bool = False
+    earned_stars_now: int | None = None
+    total_stars: int | None = None
+    new_badges: list["BadgeOut"] = []
     submitted_at: datetime
 
 
 class PracticeStats(BaseModel):
     total_points: int
     solved_count: int
+    total_stars: int = 0
+    badges_count: int = 0
+
+
+class BadgeOut(BaseModel):
+    key: str
+    label: str
+    description: str
+    icon: str
+    earned_at: str | None = None
+    assessment_id: int | None = None
+
+
+class UserRewardsOut(BaseModel):
+    total_stars: int
+    badges: list[BadgeOut]
 
 
 class CodingRunResult(BaseModel):
@@ -823,3 +843,6 @@ class CalendarEventUpdate(BaseModel):
     event_date: datetime | None = None
     reminder_minutes: int | None = None
     test_cases: list[JudgeTestCaseResult] = []
+
+
+CodingSubmissionOut.model_rebuild()

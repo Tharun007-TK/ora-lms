@@ -88,6 +88,23 @@ export default function StudentPracticePage() {
               </p>
             </div>
           )}
+          {stats && (
+            <div className="rounded-md border-hair bg-[var(--surface-raised)] px-3 py-2">
+              <p className="t-caption text-[var(--text-muted)]">Stars</p>
+              <p className="text-xl font-semibold text-[var(--warning-fg)]">
+                ⭐ {stats.total_stars}
+              </p>
+            </div>
+          )}
+          {stats && (
+            <Link
+              href="/student/rewards"
+              className="rounded-md border-hair bg-[var(--surface-raised)] px-3 py-2 hover:border-[var(--ember)]"
+            >
+              <p className="t-caption text-[var(--text-muted)]">Badges</p>
+              <p className="text-xl font-semibold">🏅 {stats.badges_count}</p>
+            </Link>
+          )}
           <div className="rounded-md border-hair bg-[var(--surface-raised)] px-3 py-2">
             <p className="t-caption text-[var(--text-muted)]">Progress</p>
             <p className="text-xl font-semibold">{solvedPct}%</p>
@@ -184,7 +201,20 @@ export default function StudentPracticePage() {
                       </Badge>
                     )}
                   </div>
-                  {p.solved && <Badge tone="success">Solved</Badge>}
+                  <div className="flex items-center gap-2">
+                    {p.stars != null && p.stars > 0 && (
+                      <span
+                        className="t-caption font-semibold text-[var(--warning-fg)]"
+                        title={`${p.stars} / 3 stars earned`}
+                      >
+                        {'★'.repeat(p.stars)}
+                        <span className="text-[var(--text-muted)]">
+                          {'☆'.repeat(3 - p.stars)}
+                        </span>
+                      </span>
+                    )}
+                    {p.solved && <Badge tone="success">Solved</Badge>}
+                  </div>
                 </CardContent>
               </Card>
             </Link>

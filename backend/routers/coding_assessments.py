@@ -22,9 +22,11 @@ from models.tables import (
     Enrollment,
     PracticeProgress,
     User,
+    UserBadge,
     UserRole,
 )
 from schemas.requests import (
+    BadgeOut,
     CodingAssessmentBrief,
     CodingAssessmentCreate,
     CodingAssessmentOut,
@@ -37,8 +39,9 @@ from schemas.requests import (
     CodingTestCaseStudentOut,
     MessageResponse,
     PracticeStats,
+    UserRewardsOut,
 )
-from services import judge_service, notification_service
+from services import judge_service, notification_service, rewards_service
 
 
 router = APIRouter(prefix="/coding-assessments", tags=["coding-assessments"])
@@ -100,6 +103,7 @@ def _serialize_brief(
     attempts_used: int | None = None,
     best_score: int | None = None,
     solved: bool | None = None,
+    stars: int | None = None,
 ) -> CodingAssessmentBrief:
     return CodingAssessmentBrief(
         id=a.id,
@@ -119,6 +123,7 @@ def _serialize_brief(
         attempts_used=attempts_used,
         best_score=best_score,
         solved=solved,
+        stars=stars,
     )
 
 
@@ -382,16 +387,23 @@ async def list_practice(
         items = [a for a in items if language in (a.allowed_languages or [])]
 
     progress_map: dict[int, int] = {}
+    stars_map: dict[int, int] = {}
     attempts_map: dict[int, tuple[int, int | None]] = {}
     if user.role == UserRole.student and items:
         aids = [a.id for a in items]
         pr = await db.execute(
-            select(PracticeProgress.assessment_id, PracticeProgress.points_earned).where(
+            select(
+                PracticeProgress.assessment_id,
+                PracticeProgress.points_earned,
+                PracticeProgress.stars,
+            ).where(
                 PracticeProgress.student_id == user.id,
                 PracticeProgress.assessment_id.in_(aids),
             )
         )
-        progress_map = {row[0]: row[1] for row in pr.all()}
+        for aid, pts, st in pr.all():
+            progress_map[aid] = pts
+            stars_map[aid] = st
         ar = await db.execute(
             select(
                 CodingSubmission.assessment_id,
@@ -413,6 +425,7 @@ async def list_practice(
             attempts_used=attempts_map.get(a.id, (None, None))[0],
             best_score=attempts_map.get(a.id, (None, None))[1],
             solved=a.id in progress_map,
+            stars=stars_map.get(a.id),
         )
         for a in items
     ]
@@ -427,10 +440,48 @@ async def practice_stats(
         select(
             func.coalesce(func.sum(PracticeProgress.points_earned), 0),
             func.count(PracticeProgress.id),
+            func.coalesce(func.sum(PracticeProgress.stars), 0),
         ).where(PracticeProgress.student_id == user.id)
     )
-    total, count = r.one()
-    return PracticeStats(total_points=int(total or 0), solved_count=int(count or 0))
+    total, count, stars_sum = r.one()
+    bc = await db.execute(
+        select(func.count(UserBadge.id)).where(UserBadge.user_id == user.id)
+    )
+    badges_count = int(bc.scalar() or 0)
+    return PracticeStats(
+        total_points=int(total or 0),
+        solved_count=int(count or 0),
+        total_stars=int(stars_sum or 0),
+        badges_count=badges_count,
+    )
+
+
+@router.get("/me/rewards", response_model=UserRewardsOut)
+async def my_rewards(
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_student),
+) -> UserRewardsOut:
+    r = await db.execute(
+        select(func.coalesce(func.sum(PracticeProgress.stars), 0)).where(
+            PracticeProgress.student_id == user.id
+        )
+    )
+    total_stars = int(r.scalar() or 0)
+    badges = await rewards_service.list_user_badges(db, user_id=user.id)
+    return UserRewardsOut(
+        total_stars=total_stars,
+        badges=[BadgeOut(**b) for b in badges],
+    )
+
+
+@router.get("/badges/catalog", response_model=list[BadgeOut])
+async def badges_catalog() -> list[BadgeOut]:
+    return [
+        BadgeOut(
+            key=b.key, label=b.label, description=b.description, icon=b.icon
+        )
+        for b in rewards_service.BADGE_CATALOG.values()
+    ]
 
 
 @router.get("/mine", response_model=list[CodingAssessmentBrief])
@@ -652,8 +703,20 @@ async def submit_code(
     submission.time_ms = max_time_ms
     submission.memory_kb = max_memory_kb
 
-    if a.is_practice and total_count > 0 and passed_count > 0 and a.points > 0:
-        earned = round(a.points * passed_count / total_count)
+    stars_now: int | None = None
+    total_stars_after: int | None = None
+    new_badges: list[BadgeOut] = []
+
+    results_list = submission.test_case_results or []
+    if a.is_practice and total_count > 0:
+        stars_now = rewards_service.compute_stars(
+            results=results_list,
+            passed_count=passed_count,
+            total_count=total_count,
+        )
+        earned = (
+            round(a.points * passed_count / total_count) if a.points > 0 else 0
+        )
         existing = await db.execute(
             select(PracticeProgress).where(
                 PracticeProgress.student_id == user.id,
@@ -662,15 +725,61 @@ async def submit_code(
         )
         prog = existing.scalar_one_or_none()
         if prog is None:
-            db.add(
-                PracticeProgress(
-                    student_id=user.id,
-                    assessment_id=a.id,
-                    points_earned=earned,
-                )
+            prog = PracticeProgress(
+                student_id=user.id,
+                assessment_id=a.id,
+                points_earned=earned,
+                stars=stars_now,
             )
-        elif earned > prog.points_earned:
-            prog.points_earned = earned
+            db.add(prog)
+        else:
+            if earned > prog.points_earned:
+                prog.points_earned = earned
+            if stars_now > prog.stars:
+                prog.stars = stars_now
+        # Compute updated total stars across all practice progress.
+        star_total_q = await db.execute(
+            select(func.coalesce(func.sum(PracticeProgress.stars), 0)).where(
+                PracticeProgress.student_id == user.id
+            )
+        )
+        total_stars_after = int(star_total_q.scalar() or 0)
+        # Optimistically include the delta if this submission's stars improved.
+        if prog is not None and prog.id is None and stars_now:
+            total_stars_after += stars_now
+
+    if not a.is_practice and submission.status == CodingSubmissionStatus.completed:
+        elapsed_seconds: int | None = None
+        # Duration-aware speedster badge relies on time between attempt start
+        # and submit; without a started-at we approximate using max testcase
+        # time (too small to trigger speedster unless duration is tiny) — so
+        # pass None when we cannot measure reliably.
+        badge_keys = await rewards_service.evaluate_graded_submit(
+            db,
+            user_id=user.id,
+            assessment=a,
+            score=submission.score,
+            max_score=a.max_score,
+            tab_switches=submission.tab_switches,
+            passed_count=passed_count,
+            total_count=total_count,
+            time_elapsed_seconds=elapsed_seconds,
+        )
+        awarded = await rewards_service.award_badges(
+            db,
+            user_id=user.id,
+            keys=badge_keys,
+            assessment_id=a.id,
+        )
+        new_badges = [
+            BadgeOut(
+                key=b.key,
+                label=b.label,
+                description=b.description,
+                icon=b.icon,
+            )
+            for b in awarded
+        ]
 
     await db.commit()
     await db.refresh(submission)
@@ -691,6 +800,9 @@ async def submit_code(
         memory_kb=submission.memory_kb,
         tab_switches=submission.tab_switches,
         auto_submitted=submission.auto_submitted,
+        earned_stars_now=stars_now,
+        total_stars=total_stars_after,
+        new_badges=new_badges,
         submitted_at=submission.submitted_at,
     )
 

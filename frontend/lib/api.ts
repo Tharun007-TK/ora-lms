@@ -780,6 +780,7 @@ export interface CodingAssessmentBrief {
   attempts_used: number | null;
   best_score: number | null;
   solved: boolean | null;
+  stars: number | null;
 }
 
 export interface CodingAssessment {
@@ -832,7 +833,24 @@ export interface CodingSubmission {
   memory_kb: number | null;
   tab_switches: number;
   auto_submitted: boolean;
+  earned_stars_now: number | null;
+  total_stars: number | null;
+  new_badges: Badge[];
   submitted_at: string;
+}
+
+export interface Badge {
+  key: string;
+  label: string;
+  description: string;
+  icon: string;
+  earned_at?: string | null;
+  assessment_id?: number | null;
+}
+
+export interface UserRewards {
+  total_stars: number;
+  badges: Badge[];
 }
 
 export interface CodingAssessmentCreatePayload {
@@ -856,6 +874,8 @@ export interface CodingAssessmentCreatePayload {
 export interface PracticeStats {
   total_points: number;
   solved_count: number;
+  total_stars: number;
+  badges_count: number;
 }
 
 export interface CodingRunResult {
@@ -968,6 +988,10 @@ export const coding = {
     apiFetch<CodingLeaderboardEntry[]>(`/coding-assessments/${id}/leaderboard`),
   practiceStats: () =>
     apiFetch<PracticeStats>('/coding-assessments/practice/stats'),
+  rewards: () =>
+    apiFetch<UserRewards>('/coding-assessments/me/rewards'),
+  badgesCatalog: () =>
+    apiFetch<Badge[]>('/coding-assessments/badges/catalog'),
 };
 
 const CODING_LANGUAGE_LABELS: Record<CodingLanguage, string> = {
