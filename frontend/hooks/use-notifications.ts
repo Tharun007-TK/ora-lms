@@ -27,7 +27,7 @@ export function useNotifications() {
   useEffect(() => {
     load();
 
-    const es = new EventSource(`${API_URL}/notifications/stream`, {
+    const es = new EventSource(`${API_URL}/api/notifications/stream`, {
       withCredentials: true,
     });
     esRef.current = es;
