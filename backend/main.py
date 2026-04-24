@@ -1,13 +1,19 @@
 from __future__ import annotations
 
+import logging
+import os
 from contextlib import asynccontextmanager
 
+from alembic import command as alembic_command
+from alembic.config import Config as AlembicConfig
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 
 from core.config import settings
 from core.database import engine
+
+log = logging.getLogger(__name__)
 from routers import ai as ai_router
 from routers import assignments as assignments_router
 from routers import auth as auth_router
@@ -25,8 +31,24 @@ from services import storage_service
 from services.judge0_client import judge0_client
 
 
+def _run_migrations() -> None:
+    """Apply Alembic migrations on startup. Safe to run repeatedly."""
+    ini_path = os.path.join(os.path.dirname(__file__), "alembic.ini")
+    if not os.path.exists(ini_path):
+        log.warning("alembic.ini not found at %s — skipping migrations", ini_path)
+        return
+    cfg = AlembicConfig(ini_path)
+    try:
+        alembic_command.upgrade(cfg, "head")
+        log.info("Alembic upgrade head completed")
+    except Exception:  # noqa: BLE001
+        log.exception("Alembic upgrade failed — continuing startup anyway")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    if os.getenv("RUN_MIGRATIONS_ON_STARTUP", "true").lower() != "false":
+        _run_migrations()
     yield
     await engine.dispose()
 
