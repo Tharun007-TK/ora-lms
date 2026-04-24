@@ -33,7 +33,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title=settings.APP_NAME,
-    version="0.2.0",
+    version="0.3.0",
     debug=settings.DEBUG,
     lifespan=lifespan,
 )
@@ -52,7 +52,7 @@ async def root() -> dict:
     return {
         "status": "ok",
         "name": settings.APP_NAME,
-        "version": "0.2.0",
+        "version": "0.3.0",
         "docs": "/docs",
         "health": "/health",
     }
