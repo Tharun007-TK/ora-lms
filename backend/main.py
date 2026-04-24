@@ -47,6 +47,17 @@ app.add_middleware(
 )
 
 
+@app.api_route("/", methods=["GET", "HEAD"], tags=["meta"], include_in_schema=False)
+async def root() -> dict:
+    return {
+        "status": "ok",
+        "name": settings.APP_NAME,
+        "version": "0.2.0",
+        "docs": "/docs",
+        "health": "/health",
+    }
+
+
 @app.get("/health", tags=["meta"])
 async def health() -> dict:
     judge0_ok = True
