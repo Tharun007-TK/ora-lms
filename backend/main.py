@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
 from contextlib import asynccontextmanager
@@ -44,8 +45,11 @@ def _run_migrations() -> None:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    if os.getenv("RUN_MIGRATIONS_ON_STARTUP", "true").lower() != "false":
-        _run_migrations()
+    # Alembic's env.py calls asyncio.run(), which crashes if invoked from
+    # within a running event loop (the FastAPI lifespan). Run in a worker
+    # thread so the migration owns its own loop.
+    if os.getenv("RUN_MIGRATIONS_ON_STARTUP", "false").lower() == "true":
+        await asyncio.to_thread(_run_migrations)
     yield
     await engine.dispose()
 
