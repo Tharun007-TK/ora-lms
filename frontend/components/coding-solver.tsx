@@ -100,12 +100,18 @@ export function CodingSolver({
         coding.get(assessmentId),
         coding.mySubmissions(assessmentId),
       ]);
+      if (!a) {
+        setError('Assessment not found.');
+        return;
+      }
       setAssessment(a);
-      const lang = a.allowed_languages[0] ?? 'python';
+      const langs = Array.isArray(a.allowed_languages) ? a.allowed_languages : [];
+      const lang: CodingLanguage = langs[0] ?? 'python';
       setLanguage(lang);
       setSource(DEFAULT_STARTER[lang]);
-      setSubmissions(subs);
-      if (subs[0]) setLatest(subs[0]);
+      const subsArr = Array.isArray(subs) ? subs : [];
+      setSubmissions(subsArr);
+      if (subsArr[0]) setLatest(subsArr[0]);
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load');
