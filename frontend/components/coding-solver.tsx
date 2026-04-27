@@ -13,6 +13,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ora';
+import { RichTextView } from '@/components/RichTextView';
 import {
   coding,
   codingLanguageLabel,
@@ -497,9 +498,10 @@ export function CodingSolver({
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="whitespace-pre-wrap t-body text-[var(--text-primary)]">
-              {assessment.description}
-            </div>
+            <RichTextView
+              html={assessment.description}
+              className="t-body text-[var(--text-primary)]"
+            />
             {assessment.test_cases_student &&
               assessment.test_cases_student.some((tc) => !tc.is_hidden) && (
                 <div className="space-y-2">

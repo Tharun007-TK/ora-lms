@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 
+import { RichTextView } from '@/components/RichTextView';
 import { SubmissionBadge } from '@/components/submission-badge';
 import { TestCaseViewer } from '@/components/testcase-viewer';
 import {
@@ -169,8 +170,11 @@ export default function StudentProblemPage() {
             <CardHeader>
               <CardTitle className="text-base">Description</CardTitle>
             </CardHeader>
-            <CardContent className="whitespace-pre-wrap text-sm text-[var(--text-secondary)]">
-              {problem.description}
+            <CardContent>
+              <RichTextView
+                html={problem.description}
+                className="text-sm text-[var(--text-secondary)]"
+              />
             </CardContent>
           </Card>
           {problem.examples && (

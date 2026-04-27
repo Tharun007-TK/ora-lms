@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
+import { RichTextEditor } from '@/components/RichTextEditor';
 import {
   Badge,
   Button,
@@ -274,17 +275,17 @@ export default function NewCodingAssessmentPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="c-desc">Problem statement (Markdown)</Label>
-              <textarea
+              <Label htmlFor="c-desc">Problem statement</Label>
+              <RichTextEditor
                 id="c-desc"
-                rows={14}
+                ariaLabel="Problem statement"
                 value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                className="flex w-full rounded-md border-hair bg-[var(--surface-raised)] px-3 py-2 font-mono text-sm focus-ora"
-                placeholder={`## Problem\n\nGiven an array and a target, return indices of two numbers summing to target.\n\n### Input format\nLine 1: n and target\nLine 2: n space-separated integers\n\n### Output format\nTwo 0-based indices i<j, space-separated\n\n### Constraints\n1 ≤ n ≤ 10^5`}
+                onChange={setDescription}
+                minHeight={280}
+                placeholder="Describe the problem, input/output format, constraints, examples…"
               />
               <p className="t-caption text-[var(--text-muted)]">
-                Markdown supported. Describe input/output format, constraints, examples.
+                Use the toolbar to format text — headings, lists, bold, links, code.
               </p>
             </div>
           </CardContent>

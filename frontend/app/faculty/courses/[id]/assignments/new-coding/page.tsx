@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useState } from 'react';
 
+import { RichTextEditor } from '@/components/RichTextEditor';
 import {
   Badge,
   Button,
@@ -177,15 +178,18 @@ export default function NewCodingAssessmentPage() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="c-desc">Description (Markdown supported)</Label>
-            <textarea
+            <Label htmlFor="c-desc">Problem statement</Label>
+            <RichTextEditor
               id="c-desc"
-              rows={6}
+              ariaLabel="Problem statement"
               value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              className="flex w-full rounded-md border-hair bg-[var(--surface-raised)] px-3 py-2 t-body focus-ora"
+              onChange={setDescription}
+              minHeight={200}
               placeholder="Describe the problem, input/output format, constraints, examples…"
             />
+            <p className="t-caption text-[var(--text-muted)]">
+              Use the toolbar to format text — headings, lists, bold, links, code.
+            </p>
           </div>
 
           <div className="space-y-2">
