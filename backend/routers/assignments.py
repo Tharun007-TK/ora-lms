@@ -245,6 +245,7 @@ async def create_assignment(
                 f"Due {assignment.due_date.isoformat()} · "
                 f"max {assignment.max_marks} marks"
             ),
+            link=f"/student/courses/{course_id}/assignments",
         )
         db.add(n)
         created_notifs.append(n)
@@ -371,6 +372,9 @@ async def import_quiz_from_docx(
                 f"{len(parsed.questions)} question(s) · "
                 f"due {assignment.due_date.isoformat()} · "
                 f"max {assignment.max_marks} marks"
+            ),
+            link=(
+                f"/student/courses/{course_id}/assignments/{assignment.id}/attempt"
             ),
         )
         db.add(n)
@@ -576,6 +580,7 @@ async def grade_submission(
             f"You scored {submission.marks}/{assignment.max_marks}"
             + (f" · {payload.feedback}" if payload.feedback else "")
         ),
+        link=f"/student/courses/{assignment.course_id}/assignments",
     )
     db.add(grade_notif)
 

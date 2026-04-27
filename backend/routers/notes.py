@@ -131,6 +131,7 @@ async def create_note(
             user_ids=student_ids,
             title=f"New note: {note.title}",
             body=f"Posted in {course.title}",
+            link=f"/student/courses/{course_id}/notes",
         )
 
     return _serialize(note)

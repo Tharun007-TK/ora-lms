@@ -244,6 +244,7 @@ async def list_custom_events(
                 db,
                 user_ids=[user.id],
                 title=f"Reminder: {ev.title}",
+                link=f"/{user.role.value}/calendar",
                 body=(
                     f"Starts at {ev.event_date.strftime('%H:%M')} · "
                     + (ev.description[:80] if ev.description else "")

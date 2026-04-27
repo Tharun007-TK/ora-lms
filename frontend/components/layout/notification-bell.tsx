@@ -1,5 +1,6 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 
 import { useNotifications } from '@/hooks/use-notifications';
@@ -20,6 +21,15 @@ export function NotificationBell() {
   const { items, unreadCount, markRead, markAllRead } = useNotifications();
   const [open, setOpen] = useState(false);
   const popoverRef = useRef<HTMLDivElement | null>(null);
+  const router = useRouter();
+
+  const handleItemClick = (id: number, read: boolean, link: string | null) => {
+    if (!read) markRead(id);
+    if (link) {
+      setOpen(false);
+      router.push(link);
+    }
+  };
 
   useEffect(() => {
     if (!open) return;
@@ -74,7 +84,7 @@ export function NotificationBell() {
                 {items.map((n) => (
                   <li
                     key={n.id}
-                    onClick={() => !n.read && markRead(n.id)}
+                    onClick={() => handleItemClick(n.id, n.read, n.link)}
                     className={`cursor-pointer px-3 py-2 t-body-sm border-hair-b hover:bg-[var(--surface-sunken)] transition-colors ${
                       n.read ? 'opacity-70' : ''
                     }`}

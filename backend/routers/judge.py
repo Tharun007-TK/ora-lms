@@ -352,6 +352,7 @@ async def submit_code(
     background.add_task(
         _notify_verdict,
         student_id=user.id,
+        problem_id=problem.id,
         problem_title=problem.title,
         verdict=agg_status,
     )
@@ -371,7 +372,7 @@ async def submit_code(
 
 
 async def _notify_verdict(
-    *, student_id: int, problem_title: str, verdict: str
+    *, student_id: int, problem_id: int, problem_title: str, verdict: str
 ) -> None:
     from core.database import SessionLocal
 
@@ -381,6 +382,7 @@ async def _notify_verdict(
             user_ids=[student_id],
             title=f"Code judge — {verdict}",
             body=f"Your submission for “{problem_title}” returned {verdict}.",
+            link=f"/student/judge/{problem_id}",
         )
 
 

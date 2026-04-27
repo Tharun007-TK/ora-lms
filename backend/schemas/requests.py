@@ -429,6 +429,7 @@ class NotificationOut(BaseModel):
     id: int
     title: str
     body: str | None = None
+    link: str | None = None
     read: bool
     created_at: datetime
 

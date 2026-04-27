@@ -208,6 +208,7 @@ export interface Notification {
   id: number;
   title: string;
   body: string | null;
+  link: string | null;
   read: boolean;
   created_at: string;
 }

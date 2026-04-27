@@ -909,38 +909,42 @@ async def seed() -> None:
 
         # Notifications — 10 across the demo accounts, skip users who already
         # have seeded notifications (idempotency).
-        notif_seeds: list[tuple[User, str, str]] = []
+        notif_seeds: list[tuple[User, str, str, str]] = []
         students = list(student_map.values())
         assignment_msg = (
             "New assignment: Problem Set 1 — Recurrences",
             "Due in 5 days · max 50 marks",
+            "/student/assignments",
         )
         graded_msg = (
             "Graded: Lab 1 — FFT in MATLAB",
             "You scored 88/100 · Clear solution; improve plot titles.",
+            "/student/assignments",
         )
         note_msg = (
             "New note: Chapter 2 — Divide & Conquer",
             "Posted in Design and Analysis of Algorithms",
+            "/student/courses",
         )
         verdict_msg = (
             "Code judge — AC",
             "Your submission for “Sum of Two Integers” returned AC.",
+            "/student/judge",
         )
 
         picks = random.sample(students, k=min(10, len(students)))
         for i, student in enumerate(picks):
             if i % 4 == 0:
-                title, body = assignment_msg
+                title, body, link = assignment_msg
             elif i % 4 == 1:
-                title, body = graded_msg
+                title, body, link = graded_msg
             elif i % 4 == 2:
-                title, body = note_msg
+                title, body, link = note_msg
             else:
-                title, body = verdict_msg
-            notif_seeds.append((student, title, body))
+                title, body, link = verdict_msg
+            notif_seeds.append((student, title, body, link))
 
-        for student, title, body in notif_seeds:
+        for student, title, body, link in notif_seeds:
             already = (
                 await db.execute(
                     select(Notification.id).where(
@@ -955,6 +959,7 @@ async def seed() -> None:
                         user_id=student.id,
                         title=title,
                         body=body,
+                        link=link,
                         read=False,
                     )
                 )

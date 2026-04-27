@@ -45,6 +45,7 @@ def _payload(notification: Notification) -> dict:
         "id": notification.id,
         "title": notification.title,
         "body": notification.body,
+        "link": notification.link,
         "read": notification.read,
         "created_at": notification.created_at.isoformat(),
     }
@@ -74,6 +75,7 @@ async def notify(
     user_ids: Iterable[int],
     title: str,
     body: str | None = None,
+    link: str | None = None,
 ) -> list[Notification]:
     """Persist + publish notifications for a set of users."""
     ids = [uid for uid in {int(u) for u in user_ids} if uid > 0]
@@ -82,7 +84,7 @@ async def notify(
 
     created: list[Notification] = []
     for uid in ids:
-        n = Notification(user_id=uid, title=title, body=body, read=False)
+        n = Notification(user_id=uid, title=title, body=body, link=link, read=False)
         db.add(n)
         created.append(n)
     await db.commit()

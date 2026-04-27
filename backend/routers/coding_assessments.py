@@ -277,6 +277,10 @@ async def create_assessment(
                 user_ids=student_ids,
                 title=f"New coding assessment: {assessment.title}",
                 body=f"Max score {assessment.max_score}{due_part}",
+                link=(
+                    f"/student/courses/{assessment.course_id}"
+                    f"/assignments/{assessment.id}/code"
+                ),
             )
     elif assessment.is_practice:
         all_students = await db.execute(
@@ -295,6 +299,7 @@ async def create_assessment(
                 user_ids=student_ids,
                 title=f"New practice problem: {assessment.title}",
                 body=f"{assessment.points} pts{diff_part}",
+                link=f"/student/practice/{assessment.id}",
             )
 
     reloaded = await db.execute(
