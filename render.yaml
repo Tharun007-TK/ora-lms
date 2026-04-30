@@ -6,8 +6,10 @@ services:
     plan: free
     region: singapore
     buildCommand: pip install -r requirements.txt
-    # Free plan ignores preDeployCommand, so run migrations on every start.
-    startCommand: alembic upgrade head && uvicorn main:app --host 0.0.0.0 --port $PORT
+    # Free plan ignores preDeployCommand. Run migrations best-effort with `;`
+    # so a stuck/failing alembic step does not block uvicorn from booting —
+    # otherwise a bad migration locks the whole service out.
+    startCommand: alembic upgrade head ; uvicorn main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /health
     envVars:
       - key: PYTHON_VERSION
