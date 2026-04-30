@@ -56,7 +56,7 @@ export function AIAssistant({ courseId }: { courseId: number }) {
       course_id: String(courseId),
       question,
     });
-    const es = new EventSource(`${API_URL}/ai/chat?${params.toString()}`, {
+    const es = new EventSource(`${API_URL}/api/ai/chat?${params.toString()}`, {
       withCredentials: true,
     });
     sourceRef.current = es;
