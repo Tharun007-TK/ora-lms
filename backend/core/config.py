@@ -41,9 +41,13 @@ class Settings(BaseSettings):
     ANTHROPIC_MODEL: str = Field(default="claude-sonnet-4-6")
     GROQ_API_KEY: str = Field(default="")
     GROQ_MODEL: str = Field(default="llama-3.1-8b-instant")
+    # Embeddings — local HuggingFace via sentence-transformers (no API key needed).
+    # BAAI/bge-small-en-v1.5 → 384 dims, optimized for retrieval, runs on CPU.
+    HF_EMBED_MODEL: str = Field(default="BAAI/bge-small-en-v1.5")
+    EMBED_DIM: int = Field(default=384)
+    # Kept for backward-compat with deployed envs; no longer consumed.
     OPENAI_API_KEY: str = Field(default="")
     OPENAI_EMBED_MODEL: str = Field(default="text-embedding-3-small")
-    EMBED_DIM: int = Field(default=1536)
     SUPABASE_URL: str = Field(default="")
     SUPABASE_SERVICE_KEY: str = Field(default="")
     SUPABASE_ANON_KEY: str = Field(default="")

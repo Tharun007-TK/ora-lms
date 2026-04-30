@@ -72,7 +72,7 @@ async def generate_notes(
     if not pdf_bytes:
         raise HTTPException(status_code=400, detail="Uploaded file is empty")
 
-    # Generate Markdown via Groq (raises HTTPException on failure)
+    # Generate Markdown via Groq (Anthropic fallback). Raises HTTPException on failure.
     generated = await ai_service.generate_notes_from_pdf(pdf_bytes)
 
     # Optionally keep the source PDF alongside the note

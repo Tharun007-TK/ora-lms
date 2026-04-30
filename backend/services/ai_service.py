@@ -1,4 +1,4 @@
-"""AI generation services — Claude notes maker + RAG retrieval + Claude stream."""
+"""AI generation services — Groq notes maker + RAG retrieval + Claude stream."""
 from __future__ import annotations
 
 import asyncio
@@ -6,7 +6,7 @@ import json
 import logging
 import re
 from dataclasses import dataclass
-from typing import AsyncIterator
+from typing import AsyncIterator, Optional
 
 from fastapi import HTTPException, status
 from sqlalchemy import delete, select
@@ -130,6 +130,19 @@ def _anthropic_client():
     return AsyncAnthropic(api_key=settings.ANTHROPIC_API_KEY)
 
 
+def _groq_client():
+    try:
+        from groq import AsyncGroq  # type: ignore
+    except ImportError as exc:  # pragma: no cover
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="groq SDK not installed on the server",
+        ) from exc
+    if not settings.GROQ_API_KEY:
+        return None
+    return AsyncGroq(api_key=settings.GROQ_API_KEY)
+
+
 def _extract_text(message) -> str:
     parts: list[str] = []
     for block in getattr(message, "content", []) or []:
@@ -139,7 +152,7 @@ def _extract_text(message) -> str:
     return "".join(parts).strip()
 
 
-async def _structure_chunk(client, chunk: str, *, index: int, total: int) -> str:
+async def _structure_chunk_anthropic(client, chunk: str, *, index: int, total: int) -> str:
     prefix = f"(Chunk {index + 1} of {total})\n\n" if total > 1 else ""
     try:
         message = await client.messages.create(
@@ -159,8 +172,33 @@ async def _structure_chunk(client, chunk: str, *, index: int, total: int) -> str
     return _extract_text(message)
 
 
+async def _structure_chunk_groq(client, chunk: str, *, index: int, total: int) -> str:
+    prefix = f"(Chunk {index + 1} of {total})\n\n" if total > 1 else ""
+    try:
+        completion = await client.chat.completions.create(
+            model=settings.GROQ_MODEL,
+            temperature=0.2,
+            max_tokens=2048,
+            messages=[
+                {"role": "system", "content": _SYSTEM_PROMPT},
+                {"role": "user", "content": f"{prefix}{chunk}"},
+            ],
+        )
+    except Exception as exc:
+        log.exception("Groq notes call failed")
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Groq request failed: {exc}",
+        ) from exc
+
+    try:
+        return (completion.choices[0].message.content or "").strip()
+    except (AttributeError, IndexError):
+        return ""
+
+
 async def generate_notes_from_pdf(file_bytes: bytes, *, max_chunks: int = 6) -> GeneratedNotes:
-    """Extract PDF text, run Claude over each chunk, and return joined Markdown."""
+    """Extract PDF text, structure via Groq (fallback Anthropic), return Markdown."""
     text = extract_pdf_text(file_bytes)
     chunks = chunk_text(text)
     if len(chunks) > max_chunks:
@@ -171,21 +209,41 @@ async def generate_notes_from_pdf(file_bytes: bytes, *, max_chunks: int = 6) -> 
         )
         chunks = chunks[:max_chunks]
 
-    client = _anthropic_client()
     total = len(chunks)
-    sections = await asyncio.gather(
-        *(_structure_chunk(client, c, index=i, total=total) for i, c in enumerate(chunks))
-    )
+    if total == 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="PDF produced no usable text",
+        )
+
+    groq = _groq_client()
+    if groq is not None:
+        provider = "groq"
+        sections = await asyncio.gather(
+            *(_structure_chunk_groq(groq, c, index=i, total=total) for i, c in enumerate(chunks))
+        )
+    elif settings.ANTHROPIC_API_KEY:
+        provider = "anthropic"
+        client = _anthropic_client()
+        sections = await asyncio.gather(
+            *(_structure_chunk_anthropic(client, c, index=i, total=total) for i, c in enumerate(chunks))
+        )
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="No notes provider configured: set GROQ_API_KEY or ANTHROPIC_API_KEY",
+        )
+
     body = "\n\n---\n\n".join(s for s in sections if s)
     if not body.strip():
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
-            detail="Claude returned an empty response",
+            detail=f"{provider} returned an empty response",
         )
     return GeneratedNotes(content=body, chunk_count=total, char_count=len(body))
 
 
-# ---------- Embeddings (OpenAI text-embedding-3-small, 1536 dims) ----------
+# ---------- Embeddings (HuggingFace BAAI/bge-small-en-v1.5, 384 dims) ----------
 
 
 def _embed_chunks(text: str, *, max_chars: int = 1200) -> list[str]:
@@ -193,25 +251,46 @@ def _embed_chunks(text: str, *, max_chars: int = 1200) -> list[str]:
     return chunk_text(text, max_chars=max_chars)
 
 
-async def _openai_client():
-    try:
-        from openai import AsyncOpenAI  # type: ignore
-    except ImportError as exc:  # pragma: no cover
-        raise RuntimeError("openai SDK not installed") from exc
-    if not settings.OPENAI_API_KEY:
-        raise RuntimeError("OPENAI_API_KEY not configured")
-    return AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
+# Module-level singleton: HuggingFaceEmbedding loads weights from disk on first
+# init (~30-60s cold). Reuse the instance across requests so subsequent embeds
+# are sub-100ms on CPU. The lock prevents concurrent first-call double-loads.
+_hf_embedder = None
+_hf_embedder_lock: Optional[asyncio.Lock] = None
+
+
+async def _get_hf_embedder():
+    global _hf_embedder, _hf_embedder_lock
+    if _hf_embedder is not None:
+        return _hf_embedder
+    if _hf_embedder_lock is None:
+        _hf_embedder_lock = asyncio.Lock()
+    async with _hf_embedder_lock:
+        if _hf_embedder is not None:
+            return _hf_embedder
+        try:
+            from llama_index.embeddings.huggingface import HuggingFaceEmbedding  # type: ignore
+        except ImportError as exc:  # pragma: no cover
+            raise RuntimeError(
+                "llama-index-embeddings-huggingface not installed"
+            ) from exc
+        log.info("Loading HF embedder %s", settings.HF_EMBED_MODEL)
+        _hf_embedder = await asyncio.to_thread(
+            HuggingFaceEmbedding,
+            model_name=settings.HF_EMBED_MODEL,
+        )
+        return _hf_embedder
 
 
 async def _embed_texts(texts: list[str]) -> list[list[float]]:
     if not texts:
         return []
-    client = await _openai_client()
-    res = await client.embeddings.create(
-        model=settings.OPENAI_EMBED_MODEL,
-        input=texts,
+    embedder = await _get_hf_embedder()
+    # llama-index batch helper runs synchronously; offload to a worker thread
+    # so the FastAPI event loop stays responsive during embedding.
+    vectors = await asyncio.to_thread(
+        embedder.get_text_embedding_batch, list(texts)
     )
-    return [d.embedding for d in res.data]
+    return [list(v) for v in vectors]
 
 
 async def embed_note(note_id: int) -> int:
@@ -327,10 +406,20 @@ def _sse(event: dict) -> str:
     return f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
 
 
+def _sse_ping() -> str:
+    # SSE comment line — clients ignore it but it keeps the TCP socket alive
+    # past Render's 30s idle timeout while retrieval/first token is pending.
+    return ": keepalive\n\n"
+
+
 async def stream_rag_answer(
     *, course_id: int, question: str
 ) -> AsyncIterator[str]:
     """Yield Server-Sent Events: meta → token* → done (or error)."""
+    # Flush headers immediately so the client opens the SSE connection cleanly
+    # before any potentially-slow upstream call (embedding, pgvector, Claude).
+    yield _sse_ping()
+
     # Retrieve in a fresh session so we don't hold the request's session open
     # while we stream.
     async with SessionLocal() as db:
@@ -375,18 +464,49 @@ async def stream_rag_answer(
     )
 
     client = AsyncAnthropic(api_key=settings.ANTHROPIC_API_KEY)
+
+    # Bridge the Anthropic stream through a queue so we can interleave
+    # keepalive pings while we wait for the first (and subsequent) tokens.
+    # Render free tier closes idle SSE connections at 30s — without pings,
+    # a slow Claude warm-up will drop the response mid-flight.
+    queue: asyncio.Queue[Optional[dict]] = asyncio.Queue()
+
+    async def _producer() -> None:
+        try:
+            async with client.messages.stream(
+                model=settings.ANTHROPIC_MODEL,
+                max_tokens=1024,
+                system=_RAG_SYSTEM_PROMPT,
+                messages=[{"role": "user", "content": user_message}],
+            ) as stream:
+                async for text in stream.text_stream:
+                    if text:
+                        await queue.put({"type": "token", "text": text})
+        except Exception as exc:
+            log.exception("Anthropic stream failed")
+            await queue.put(
+                {"type": "error", "detail": f"Claude stream failed: {exc}"}
+            )
+        finally:
+            await queue.put(None)  # sentinel: producer done
+
+    producer_task = asyncio.create_task(_producer())
     try:
-        async with client.messages.stream(
-            model=settings.ANTHROPIC_MODEL,
-            max_tokens=1024,
-            system=_RAG_SYSTEM_PROMPT,
-            messages=[{"role": "user", "content": user_message}],
-        ) as stream:
-            async for text in stream.text_stream:
-                if text:
-                    yield _sse({"type": "token", "text": text})
-    except Exception as exc:
-        log.exception("Anthropic stream failed")
-        yield _sse({"type": "error", "detail": f"Claude stream failed: {exc}"})
+        while True:
+            try:
+                event = await asyncio.wait_for(queue.get(), timeout=10.0)
+            except asyncio.TimeoutError:
+                yield _sse_ping()
+                continue
+            if event is None:
+                break
+            yield _sse(event)
+    finally:
+        if not producer_task.done():
+            producer_task.cancel()
+            try:
+                await producer_task
+            except (asyncio.CancelledError, Exception):
+                pass
 
     yield _sse({"type": "done"})
