@@ -198,7 +198,7 @@ async def _structure_chunk_groq(client, chunk: str, *, index: int, total: int) -
 
 
 async def generate_notes_from_pdf(file_bytes: bytes, *, max_chunks: int = 6) -> GeneratedNotes:
-    """Extract PDF text, structure via Groq (fallback Anthropic), return Markdown."""
+    """Extract PDF text, structure via Anthropic (fallback Groq), return Markdown."""
     text = extract_pdf_text(file_bytes)
     chunks = chunk_text(text)
     if len(chunks) > max_chunks:
@@ -216,22 +216,22 @@ async def generate_notes_from_pdf(file_bytes: bytes, *, max_chunks: int = 6) -> 
             detail="PDF produced no usable text",
         )
 
-    groq = _groq_client()
-    if groq is not None:
-        provider = "groq"
-        sections = await asyncio.gather(
-            *(_structure_chunk_groq(groq, c, index=i, total=total) for i, c in enumerate(chunks))
-        )
-    elif settings.ANTHROPIC_API_KEY:
+    if settings.ANTHROPIC_API_KEY:
         provider = "anthropic"
         client = _anthropic_client()
         sections = await asyncio.gather(
             *(_structure_chunk_anthropic(client, c, index=i, total=total) for i, c in enumerate(chunks))
         )
     else:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="No notes provider configured: set GROQ_API_KEY or ANTHROPIC_API_KEY",
+        groq = _groq_client()
+        if groq is None:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="No notes provider configured: set ANTHROPIC_API_KEY or GROQ_API_KEY",
+            )
+        provider = "groq"
+        sections = await asyncio.gather(
+            *(_structure_chunk_groq(groq, c, index=i, total=total) for i, c in enumerate(chunks))
         )
 
     body = "\n\n---\n\n".join(s for s in sections if s)
