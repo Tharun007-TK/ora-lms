@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import csv
+import io
 from datetime import datetime, timezone
 
 from fastapi import (
@@ -11,6 +13,7 @@ from fastapi import (
     UploadFile,
     status,
 )
+from fastapi.responses import StreamingResponse
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -59,6 +62,28 @@ from schemas.requests import (
 )
 from services import notification_service, quiz_service, storage_service
 from services.docx_quiz_parser import DocxParseError, parse_docx_quiz
+
+
+def _csv_response(filename: str, rows: list[list]) -> StreamingResponse:
+    buf = io.StringIO()
+    writer = csv.writer(buf, lineterminator="\n")
+    for row in rows:
+        writer.writerow(row)
+    buf.seek(0)
+    return StreamingResponse(
+        iter([buf.getvalue()]),
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+def _iso(dt: datetime | None) -> str:
+    return dt.isoformat() if dt else ""
+
+
+def _safe_filename_part(value: str) -> str:
+    cleaned = "".join(c if c.isalnum() or c in ("-", "_") else "_" for c in value)
+    return cleaned[:60] or "report"
 
 
 router = APIRouter(tags=["assignments"])
@@ -1112,3 +1137,172 @@ async def assignment_stats(
         )
         for a in all_assignments
     ]
+
+
+# ---------- CSV report exports (faculty / admin) ----------
+
+
+@router.get("/assignments/{assignment_id}/submissions/export.csv")
+async def export_file_submissions_csv(
+    assignment_id: int,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_faculty_or_admin),
+) -> StreamingResponse:
+    a = await _get_assignment_or_404(db, assignment_id)
+    if a.type != AssignmentType.file:
+        raise HTTPException(
+            status_code=400, detail="Use the quiz export for quiz assignments"
+        )
+    course = await _get_course_or_404(db, a.course_id)
+    if user.role == UserRole.faculty and course.faculty_id != user.id:
+        raise HTTPException(status_code=403, detail="Not your course")
+
+    roster_res = await db.execute(
+        select(User)
+        .join(Enrollment, Enrollment.student_id == User.id)
+        .where(Enrollment.course_id == a.course_id, User.role == UserRole.student)
+        .order_by(User.name)
+    )
+    roster: list[User] = list(roster_res.scalars().all())
+
+    sub_res = await db.execute(
+        select(Submission).where(Submission.assignment_id == assignment_id)
+    )
+    sub_by_student: dict[int, Submission] = {
+        s.student_id: s for s in sub_res.scalars().all()
+    }
+
+    rows: list[list] = [
+        [
+            "student_id",
+            "student_name",
+            "student_email",
+            "status",
+            "submitted_at",
+            "file_url",
+            "marks",
+            "max_marks",
+            "feedback",
+            "graded_at",
+        ]
+    ]
+    for s in roster:
+        sub = sub_by_student.get(s.id)
+        if sub is None:
+            status_text = "missing"
+        elif sub.graded_at is not None:
+            status_text = "graded"
+        else:
+            status_text = "submitted"
+        rows.append(
+            [
+                s.id,
+                s.name,
+                s.email,
+                status_text,
+                _iso(sub.submitted_at) if sub else "",
+                storage_service.resolve_url(sub.file_url) if sub and sub.file_url else "",
+                sub.marks if sub and sub.marks is not None else "",
+                a.max_marks,
+                (sub.feedback or "") if sub else "",
+                _iso(sub.graded_at) if sub else "",
+            ]
+        )
+
+    filename = f"submissions_{assignment_id}_{_safe_filename_part(a.title)}.csv"
+    return _csv_response(filename, rows)
+
+
+@router.get("/assignments/{assignment_id}/quiz/attempts/export.csv")
+async def export_quiz_attempts_csv(
+    assignment_id: int,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_faculty_or_admin),
+) -> StreamingResponse:
+    a = await _get_quiz_assignment_or_404(db, assignment_id)
+    await _ensure_faculty_owns(db, a, user)
+
+    q_res = await db.execute(
+        select(QuizQuestion)
+        .where(QuizQuestion.assignment_id == assignment_id)
+        .order_by(QuizQuestion.position.asc(), QuizQuestion.id.asc())
+    )
+    questions: list[QuizQuestion] = list(q_res.scalars().all())
+
+    roster_res = await db.execute(
+        select(User)
+        .join(Enrollment, Enrollment.student_id == User.id)
+        .where(Enrollment.course_id == a.course_id, User.role == UserRole.student)
+        .order_by(User.name)
+    )
+    roster: list[User] = list(roster_res.scalars().all())
+
+    at_res = await db.execute(
+        select(QuizAttempt).where(QuizAttempt.assignment_id == assignment_id)
+    )
+    attempts: list[QuizAttempt] = list(at_res.scalars().all())
+    at_by_student: dict[int, QuizAttempt] = {at.student_id: at for at in attempts}
+
+    answers_by_attempt: dict[int, dict[int, bool]] = {}
+    if attempts:
+        ans_res = await db.execute(
+            select(QuizAnswer).where(
+                QuizAnswer.attempt_id.in_([at.id for at in attempts])
+            )
+        )
+        for ans in ans_res.scalars().all():
+            answers_by_attempt.setdefault(ans.attempt_id, {})[ans.question_id] = ans.is_correct
+
+    headers = [
+        "student_id",
+        "student_name",
+        "student_email",
+        "status",
+        "started_at",
+        "submitted_at",
+        "score",
+        "max_score",
+        "percentage",
+    ]
+    for idx, _q in enumerate(questions, start=1):
+        headers.append(f"q{idx}_correct")
+
+    rows: list[list] = [headers]
+    for s in roster:
+        at = at_by_student.get(s.id)
+        if at is None:
+            status_text = "not_attempted"
+        elif at.submitted_at is None:
+            status_text = "in_progress"
+        else:
+            status_text = "submitted"
+
+        score = at.score if at and at.score is not None else ""
+        max_score = at.max_score if at and at.max_score is not None else ""
+        if isinstance(score, int) and isinstance(max_score, int) and max_score > 0:
+            pct = round(score / max_score * 100, 2)
+        else:
+            pct = ""
+
+        row: list = [
+            s.id,
+            s.name,
+            s.email,
+            status_text,
+            _iso(at.started_at) if at else "",
+            _iso(at.submitted_at) if at else "",
+            score,
+            max_score,
+            pct,
+        ]
+        ans_map = answers_by_attempt.get(at.id, {}) if at else {}
+        for q in questions:
+            if at is None or at.submitted_at is None:
+                row.append("")
+            else:
+                val = ans_map.get(q.id)
+                row.append(1 if val is True else 0)
+        rows.append(row)
+
+    filename = f"quiz_{assignment_id}_{_safe_filename_part(a.title)}.csv"
+    return _csv_response(filename, rows)

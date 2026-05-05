@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import csv
+import io
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import StreamingResponse
 from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -939,3 +942,79 @@ async def coding_leaderboard(
         )
         for i, row in enumerate(rows)
     ]
+
+
+# ---------- CSV report export (faculty / admin) ----------
+
+
+def _safe_filename_part(value: str) -> str:
+    cleaned = "".join(c if c.isalnum() or c in ("-", "_") else "_" for c in value)
+    return cleaned[:60] or "report"
+
+
+@router.get("/{assessment_id}/submissions/export.csv")
+async def export_submissions_csv(
+    assessment_id: int,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_faculty_or_admin),
+) -> StreamingResponse:
+    a = await _get_assessment_or_404(db, assessment_id)
+    await _faculty_owns_or_403(db, a, user)
+
+    r = await db.execute(
+        select(CodingSubmission, User.email, User.name)
+        .join(User, User.id == CodingSubmission.student_id)
+        .where(CodingSubmission.assessment_id == assessment_id)
+        .order_by(desc(CodingSubmission.submitted_at))
+    )
+    rows = r.all()
+
+    buf = io.StringIO()
+    writer = csv.writer(buf, lineterminator="\n")
+    writer.writerow(
+        [
+            "submission_id",
+            "student_id",
+            "student_name",
+            "student_email",
+            "language",
+            "status",
+            "score",
+            "max_score",
+            "passed_count",
+            "total_count",
+            "time_ms",
+            "memory_kb",
+            "tab_switches",
+            "auto_submitted",
+            "submitted_at",
+        ]
+    )
+    for s, email, name in rows:
+        writer.writerow(
+            [
+                s.id,
+                s.student_id,
+                name,
+                email,
+                s.language,
+                s.status.value if hasattr(s.status, "value") else str(s.status),
+                s.score,
+                a.max_score,
+                s.passed_count if s.passed_count is not None else "",
+                s.total_count if s.total_count is not None else "",
+                s.time_ms if s.time_ms is not None else "",
+                s.memory_kb if s.memory_kb is not None else "",
+                s.tab_switches,
+                "true" if s.auto_submitted else "false",
+                s.submitted_at.isoformat() if s.submitted_at else "",
+            ]
+        )
+    buf.seek(0)
+
+    filename = f"coding_{assessment_id}_{_safe_filename_part(a.title)}.csv"
+    return StreamingResponse(
+        iter([buf.getvalue()]),
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )

@@ -17,6 +17,7 @@ import { Input } from '@/components/ora';
 import { Label } from '@/components/ora';
 import {
   assignments,
+  downloadFile,
   fileUrl,
   type Assignment,
   type Submission,
@@ -35,6 +36,22 @@ export default function FacultySubmissionsPage() {
   const [savingId, setSavingId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [exporting, setExporting] = useState(false);
+
+  const exportCsv = async () => {
+    setExporting(true);
+    setError(null);
+    try {
+      await downloadFile(
+        assignments.exportSubmissionsCsvUrl(aid),
+        `submissions_${aid}.csv`,
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Export failed');
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const load = async () => {
     try {
@@ -101,15 +118,27 @@ export default function FacultySubmissionsPage() {
         >
           ← Back to assessments
         </Link>
-        <h1 className="text-2xl font-semibold">
-          Submissions{assignment ? ` · ${assignment.title}` : ''}
-        </h1>
-        {assignment && (
-          <p className="text-sm text-[var(--text-secondary)]">
-            Due {new Date(assignment.due_date).toLocaleString()} · max{' '}
-            {assignment.max_marks} marks
-          </p>
-        )}
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="space-y-1">
+            <h1 className="text-2xl font-semibold">
+              Submissions{assignment ? ` · ${assignment.title}` : ''}
+            </h1>
+            {assignment && (
+              <p className="text-sm text-[var(--text-secondary)]">
+                Due {new Date(assignment.due_date).toLocaleString()} · max{' '}
+                {assignment.max_marks} marks
+              </p>
+            )}
+          </div>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={exportCsv}
+            disabled={exporting || loading}
+          >
+            {exporting ? 'Exporting…' : 'Export CSV'}
+          </Button>
+        </div>
       </header>
 
       {error && <p className="text-sm text-[var(--danger-fg)]">{error}</p>}

@@ -4,8 +4,8 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ora';
-import { coding, type CodingLeaderboardEntry } from '@/lib/api';
+import { Button, Card, CardContent, CardHeader, CardTitle } from '@/components/ora';
+import { coding, downloadFile, type CodingLeaderboardEntry } from '@/lib/api';
 
 export default function CodingLeaderboardPage() {
   const params = useParams<{ id: string; cid: string }>();
@@ -15,6 +15,22 @@ export default function CodingLeaderboardPage() {
   const [entries, setEntries] = useState<CodingLeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
+
+  const exportCsv = async () => {
+    setExporting(true);
+    setError(null);
+    try {
+      await downloadFile(
+        coding.exportSubmissionsCsvUrl(cid),
+        `coding_${cid}.csv`,
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Export failed');
+    } finally {
+      setExporting(false);
+    }
+  };
 
   useEffect(() => {
     if (!Number.isFinite(cid)) return;
@@ -29,19 +45,29 @@ export default function CodingLeaderboardPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <Link
-          href="/faculty/assessments"
-          className="text-xs text-[var(--text-secondary)] hover:underline"
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <Link
+            href="/faculty/assessments"
+            className="text-xs text-[var(--text-secondary)] hover:underline"
+          >
+            ← Back to assessments
+          </Link>
+          <h1 className="mt-1 text-2xl font-semibold">Code Arena Leaderboard</h1>
+          {!loading && !error && (
+            <p className="t-caption mt-1 text-[var(--text-muted)]">
+              {entries.length} student{entries.length !== 1 ? 's' : ''} attempted
+            </p>
+          )}
+        </div>
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={exportCsv}
+          disabled={exporting || loading}
         >
-          ← Back to assessments
-        </Link>
-        <h1 className="mt-1 text-2xl font-semibold">Code Arena Leaderboard</h1>
-        {!loading && !error && (
-          <p className="t-caption mt-1 text-[var(--text-muted)]">
-            {entries.length} student{entries.length !== 1 ? 's' : ''} attempted
-          </p>
-        )}
+          {exporting ? 'Exporting…' : 'Export CSV'}
+        </Button>
       </div>
 
       {loading ? (

@@ -4,8 +4,8 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ora';
-import { quiz, type QuizAttemptSummary } from '@/lib/api';
+import { Button, Card, CardContent, CardHeader, CardTitle } from '@/components/ora';
+import { downloadFile, quiz, type QuizAttemptSummary } from '@/lib/api';
 
 export default function QuizLeaderboardPage() {
   const params = useParams<{ id: string; aid: string }>();
@@ -15,6 +15,22 @@ export default function QuizLeaderboardPage() {
   const [attempts, setAttempts] = useState<QuizAttemptSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
+
+  const exportCsv = async () => {
+    setExporting(true);
+    setError(null);
+    try {
+      await downloadFile(
+        quiz.exportAttemptsCsvUrl(aid),
+        `quiz_${aid}.csv`,
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Export failed');
+    } finally {
+      setExporting(false);
+    }
+  };
 
   useEffect(() => {
     if (!Number.isFinite(aid)) return;
@@ -34,19 +50,29 @@ export default function QuizLeaderboardPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <Link
-          href="/faculty/assessments"
-          className="text-xs text-[var(--text-secondary)] hover:underline"
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <Link
+            href="/faculty/assessments"
+            className="text-xs text-[var(--text-secondary)] hover:underline"
+          >
+            ← Back to assessments
+          </Link>
+          <h1 className="mt-1 text-2xl font-semibold">Quiz Leaderboard</h1>
+          {!loading && !error && (
+            <p className="t-caption mt-1 text-[var(--text-muted)]">
+              {attempts.length} student{attempts.length !== 1 ? 's' : ''} completed
+            </p>
+          )}
+        </div>
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={exportCsv}
+          disabled={exporting || loading}
         >
-          ← Back to assessments
-        </Link>
-        <h1 className="mt-1 text-2xl font-semibold">Quiz Leaderboard</h1>
-        {!loading && !error && (
-          <p className="t-caption mt-1 text-[var(--text-muted)]">
-            {attempts.length} student{attempts.length !== 1 ? 's' : ''} completed
-          </p>
-        )}
+          {exporting ? 'Exporting…' : 'Export CSV'}
+        </Button>
       </div>
 
       {loading ? (

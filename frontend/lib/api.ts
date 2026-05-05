@@ -374,6 +374,36 @@ export function fileUrl(url: string | null | undefined): string | null {
   return url;
 }
 
+/** Download a file URL with credentials, triggering a browser save dialog. */
+export async function downloadFile(
+  url: string,
+  fallbackFilename: string,
+): Promise<void> {
+  const res = await fetch(url, { credentials: 'include' });
+  if (!res.ok) {
+    let detail: string | null = null;
+    try {
+      const data = await res.json();
+      detail = (data?.detail as string) || null;
+    } catch {
+      detail = await res.text().catch(() => null);
+    }
+    throw new Error(detail || `Download failed (${res.status})`);
+  }
+  const blob = await res.blob();
+  const disposition = res.headers.get('content-disposition') || '';
+  const match = /filename="?([^";]+)"?/i.exec(disposition);
+  const filename = match?.[1] || fallbackFilename;
+  const blobUrl = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = blobUrl;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(blobUrl);
+}
+
 export interface StudentImportRow {
   line: number;
   email: string;
@@ -568,6 +598,8 @@ export const assignments = {
       fd,
     );
   },
+  exportSubmissionsCsvUrl: (id: number) =>
+    `${API_URL}/api/assignments/${id}/submissions/export.csv`,
 };
 
 export const library = {
@@ -993,6 +1025,8 @@ export const coding = {
     apiFetch<UserRewards>('/coding-assessments/me/rewards'),
   badgesCatalog: () =>
     apiFetch<Badge[]>('/coding-assessments/badges/catalog'),
+  exportSubmissionsCsvUrl: (id: number) =>
+    `${API_URL}/api/coding-assessments/${id}/submissions/export.csv`,
 };
 
 const CODING_LANGUAGE_LABELS: Record<CodingLanguage, string> = {
@@ -1061,6 +1095,8 @@ export const quiz = {
     apiFetch<QuizAttemptSummary[]>(
       `/assignments/${assignmentId}/quiz/attempts`,
     ),
+  exportAttemptsCsvUrl: (assignmentId: number) =>
+    `${API_URL}/api/assignments/${assignmentId}/quiz/attempts/export.csv`,
 };
 
 export const LANGUAGES: { id: number; name: string; monaco: string }[] = [
