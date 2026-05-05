@@ -1122,6 +1122,20 @@ export const ai = {
   },
 };
 
+export type AssessmentSummaryKind = 'file' | 'quiz' | 'coding';
+
+export const analytics = {
+  summaryCsvUrl: (opts?: { kind?: AssessmentSummaryKind; courseId?: number }) => {
+    const params = new URLSearchParams();
+    if (opts?.kind) params.set('kind', opts.kind);
+    if (opts?.courseId !== undefined) params.set('course_id', String(opts.courseId));
+    const qs = params.toString();
+    return `${API_URL}/api/analytics/assessments/summary.csv${qs ? `?${qs}` : ''}`;
+  },
+  quizQuestionsCsvUrl: (assignmentId: number) =>
+    `${API_URL}/api/analytics/quiz/${assignmentId}/questions.csv`,
+};
+
 export const profile = {
   me: () => apiFetch<UserProfile>('/profile/me'),
   get: (userId: number) => apiFetch<UserProfile>(`/profile/${userId}`),

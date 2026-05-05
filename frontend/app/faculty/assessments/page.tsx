@@ -13,10 +13,13 @@ import {
   CardTitle,
 } from '@/components/ora';
 import {
+  analytics,
   assignments,
   coding,
   courses,
+  downloadFile,
   type Assignment,
+  type AssessmentSummaryKind,
   type CodingAssessmentBrief,
   type CodingDifficulty,
   type Course,
@@ -52,6 +55,26 @@ export default function FacultyAssessmentsPage() {
   const [filter, setFilter] = useState<FilterKey>('all');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
+
+  const exportSummary = async () => {
+    setExporting(true);
+    setError(null);
+    try {
+      const kind: AssessmentSummaryKind | undefined =
+        filter === 'file' || filter === 'quiz' || filter === 'coding'
+          ? filter
+          : undefined;
+      await downloadFile(
+        analytics.summaryCsvUrl(kind ? { kind } : undefined),
+        `my_assessments_${kind ?? 'all'}.csv`,
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Export failed');
+    } finally {
+      setExporting(false);
+    }
+  };
 
   useEffect(() => {
     (async () => {
@@ -161,9 +184,19 @@ export default function FacultyAssessmentsPage() {
             All assessments you authored — file assignments, MCQ quizzes, coding, and practice problems.
           </p>
         </div>
-        <Button asChild size="sm">
-          <Link href="/faculty/assessments/new">+ New assessment</Link>
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={exportSummary}
+            disabled={exporting || loading}
+          >
+            {exporting ? 'Exporting…' : 'Export summary CSV'}
+          </Button>
+          <Button asChild size="sm">
+            <Link href="/faculty/assessments/new">+ New assessment</Link>
+          </Button>
+        </div>
       </header>
 
       <div className="flex flex-wrap items-center gap-2">

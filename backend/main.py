@@ -16,6 +16,7 @@ from core.database import engine
 
 log = logging.getLogger(__name__)
 from routers import ai as ai_router
+from routers import analytics as analytics_router
 from routers import assignments as assignments_router
 from routers import auth as auth_router
 from routers import calendar as calendar_router
@@ -119,6 +120,7 @@ app.include_router(notifications_router.router)
 app.include_router(profile_router.router)
 app.include_router(calendar_router.router)
 app.include_router(coding_assessments_router.router)
+app.include_router(analytics_router.router)
 
 # /api alias mounts for deployments where the frontend sets
 # NEXT_PUBLIC_API_URL to the backend origin and prefixes requests with `/api`.
@@ -136,5 +138,6 @@ for _aliased in (
     profile_router,
     calendar_router,
     coding_assessments_router,
+    analytics_router,
 ):
     app.include_router(_aliased.router, prefix="/api", include_in_schema=False)

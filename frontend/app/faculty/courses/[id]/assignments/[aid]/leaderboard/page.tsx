@@ -5,7 +5,12 @@ import { useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 import { Button, Card, CardContent, CardHeader, CardTitle } from '@/components/ora';
-import { downloadFile, quiz, type QuizAttemptSummary } from '@/lib/api';
+import {
+  analytics,
+  downloadFile,
+  quiz,
+  type QuizAttemptSummary,
+} from '@/lib/api';
 
 export default function QuizLeaderboardPage() {
   const params = useParams<{ id: string; aid: string }>();
@@ -16,6 +21,7 @@ export default function QuizLeaderboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
+  const [analysing, setAnalysing] = useState(false);
 
   const exportCsv = async () => {
     setExporting(true);
@@ -29,6 +35,21 @@ export default function QuizLeaderboardPage() {
       setError(err instanceof Error ? err.message : 'Export failed');
     } finally {
       setExporting(false);
+    }
+  };
+
+  const exportQuestionAnalysis = async () => {
+    setAnalysing(true);
+    setError(null);
+    try {
+      await downloadFile(
+        analytics.quizQuestionsCsvUrl(aid),
+        `quiz_analysis_${aid}.csv`,
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Export failed');
+    } finally {
+      setAnalysing(false);
     }
   };
 
@@ -65,14 +86,24 @@ export default function QuizLeaderboardPage() {
             </p>
           )}
         </div>
-        <Button
-          variant="secondary"
-          size="sm"
-          onClick={exportCsv}
-          disabled={exporting || loading}
-        >
-          {exporting ? 'Exporting…' : 'Export CSV'}
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={exportCsv}
+            disabled={exporting || loading}
+          >
+            {exporting ? 'Exporting…' : 'Export CSV'}
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={exportQuestionAnalysis}
+            disabled={analysing || loading}
+          >
+            {analysing ? 'Analysing…' : 'Question analysis CSV'}
+          </Button>
+        </div>
       </div>
 
       {loading ? (
