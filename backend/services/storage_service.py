@@ -10,10 +10,12 @@ raw Supabase object URLs.
 """
 from __future__ import annotations
 
+import asyncio
 import io
 import os
 import re
 import secrets
+import threading
 import time
 import uuid
 from dataclasses import dataclass
@@ -68,11 +70,28 @@ def _object_key(prefix: str, filename: str) -> str:
     return f"{prefix}/{uuid.uuid4().hex}-{token}-{_safe_name(filename)}"
 
 
+# Module-level cached client. supabase-py is sync and constructs an httpx
+# client per call — building one per request was both wasteful and slow under
+# concurrency. Cache after first construction; the lock guards first-call
+# double-creation.
+_supabase_singleton = None
+_supabase_singleton_lock = threading.Lock()
+
+
 def _supabase_client():
     # Lazy import so the backend can boot without supabase-py installed in dev.
-    from supabase import create_client  # type: ignore
+    global _supabase_singleton
+    if _supabase_singleton is not None:
+        return _supabase_singleton
+    with _supabase_singleton_lock:
+        if _supabase_singleton is not None:
+            return _supabase_singleton
+        from supabase import create_client  # type: ignore
 
-    return create_client(settings.SUPABASE_URL, settings.SUPABASE_SERVICE_KEY)
+        _supabase_singleton = create_client(
+            settings.SUPABASE_URL, settings.SUPABASE_SERVICE_KEY
+        )
+        return _supabase_singleton
 
 
 async def upload_file(file: UploadFile, *, bucket: str, prefix: str) -> StoredFile:
@@ -94,7 +113,10 @@ async def upload_file(file: UploadFile, *, bucket: str, prefix: str) -> StoredFi
     if _use_supabase():
         try:
             client = _supabase_client()
-            client.storage.from_(bucket).upload(
+            # supabase-py's storage SDK is sync (httpx underneath). Offload so
+            # the event loop is not blocked while the bytes upload to Supabase.
+            await asyncio.to_thread(
+                client.storage.from_(bucket).upload,
                 path=key,
                 file=data,
                 file_options={"content-type": content_type, "upsert": "false"},
@@ -209,7 +231,8 @@ async def upload_image(
     if _use_supabase():
         try:
             client = _supabase_client()
-            client.storage.from_(bucket).upload(
+            await asyncio.to_thread(
+                client.storage.from_(bucket).upload,
                 path=key,
                 file=data,
                 file_options={"content-type": content_type, "upsert": "true"},
