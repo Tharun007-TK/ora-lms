@@ -44,14 +44,14 @@ async def _load_with_user(
     return profile, user, user.department
 
 
-def _serialize(
+async def _serialize(
     profile: UserProfile, user: User, dept: Department | None
 ) -> UserProfileOut:
-    avatar = storage_service.resolve_url(
+    avatar = await storage_service.resolve_url_async(
         profile.avatar_url,
         ttl_seconds=storage_service.PROFILE_SIGNED_URL_TTL_SECONDS,
     )
-    cover = storage_service.resolve_url(
+    cover = await storage_service.resolve_url_async(
         profile.cover_url,
         ttl_seconds=storage_service.PROFILE_SIGNED_URL_TTL_SECONDS,
     )
@@ -83,7 +83,7 @@ async def get_me(
 ) -> UserProfileOut:
     profile, u, dept = await _load_with_user(db, user.id)
     await db.commit()
-    return _serialize(profile, u, dept)
+    return await _serialize(profile, u, dept)
 
 
 @router.patch("/me", response_model=UserProfileOut)
@@ -113,7 +113,7 @@ async def update_me(
 
     await db.commit()
     await db.refresh(profile)
-    return _serialize(profile, u, dept)
+    return await _serialize(profile, u, dept)
 
 
 @router.post("/me/avatar", response_model=UserProfileOut)
@@ -133,7 +133,7 @@ async def upload_avatar(
     profile.avatar_url = stored.path
     await db.commit()
     await db.refresh(profile)
-    return _serialize(profile, u, dept)
+    return await _serialize(profile, u, dept)
 
 
 @router.post("/me/cover", response_model=UserProfileOut)
@@ -153,7 +153,7 @@ async def upload_cover(
     profile.cover_url = stored.path
     await db.commit()
     await db.refresh(profile)
-    return _serialize(profile, u, dept)
+    return await _serialize(profile, u, dept)
 
 
 @router.get("/{user_id}", response_model=UserProfileOut)
@@ -204,4 +204,4 @@ async def get_public_profile(
             detail="This profile is private",
         )
 
-    return _serialize(profile, user, user.department)
+    return await _serialize(profile, user, user.department)

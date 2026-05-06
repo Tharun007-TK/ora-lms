@@ -26,13 +26,13 @@ from services import ai_service, storage_service
 router = APIRouter(prefix="/ai", tags=["ai"])
 
 
-def _serialize(note: Note) -> NoteOut:
+async def _serialize(note: Note) -> NoteOut:
     return NoteOut(
         id=note.id,
         course_id=note.course_id,
         title=note.title,
         content=note.content,
-        file_url=storage_service.resolve_url(note.file_url),
+        file_url=await storage_service.resolve_url_async(note.file_url),
         ai_generated=note.ai_generated,
         created_by=note.created_by,
         created_at=note.created_at,
@@ -101,7 +101,7 @@ async def generate_notes(
     # Embed in the background so the response is not blocked on OpenAI.
     background.add_task(ai_service.embed_note, note.id)
 
-    return _serialize(note)
+    return await _serialize(note)
 
 
 @router.get("/chat")

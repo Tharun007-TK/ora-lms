@@ -29,7 +29,7 @@ from services import storage_service
 router = APIRouter(prefix="/college", tags=["college"])
 
 
-def _serialize_faculty(
+async def _serialize_faculty(
     user: User, profile: UserProfile | None, dept: Department | None
 ) -> FacultyProfileOut:
     return FacultyProfileOut(
@@ -42,7 +42,7 @@ def _serialize_faculty(
         designation=profile.designation if profile else None,
         qualifications=profile.qualifications if profile else None,
         achievements=profile.achievements if profile else None,
-        photo_url=storage_service.resolve_url(
+        photo_url=await storage_service.resolve_url_async(
             profile.avatar_url if profile else None,
             ttl_seconds=storage_service.PROFILE_SIGNED_URL_TTL_SECONDS,
         ),
@@ -123,7 +123,7 @@ async def list_department_faculty(
         .order_by(User.name)
     )
     rows = result.all()
-    return [_serialize_faculty(user, profile, dept) for user, profile in rows]
+    return [await _serialize_faculty(user, profile, dept) for user, profile in rows]
 
 
 @router.post("/departments", response_model=DepartmentOut, status_code=status.HTTP_201_CREATED)
@@ -195,7 +195,7 @@ async def list_faculty(db: AsyncSession = Depends(get_db)) -> list[FacultyProfil
         .order_by(User.name)
     )
     rows = result.all()
-    return [_serialize_faculty(user, profile, dept) for user, profile, dept in rows]
+    return [await _serialize_faculty(user, profile, dept) for user, profile, dept in rows]
 
 
 @router.get("/faculty/{faculty_id}", response_model=FacultyProfileOut)
@@ -213,4 +213,4 @@ async def get_faculty(
     user = result.scalar_one_or_none()
     if user is None or not user.is_active:
         raise HTTPException(status_code=404, detail="Faculty not found")
-    return _serialize_faculty(user, user.profile, user.department)
+    return await _serialize_faculty(user, user.profile, user.department)

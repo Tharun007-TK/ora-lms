@@ -168,7 +168,7 @@ def _serialize_assignment(
     )
 
 
-def _serialize_submission(
+async def _serialize_submission(
     s: Submission, *, student_name: str | None = None
 ) -> SubmissionOut:
     return SubmissionOut(
@@ -176,7 +176,7 @@ def _serialize_submission(
         assignment_id=s.assignment_id,
         student_id=s.student_id,
         student_name=student_name,
-        file_url=storage_service.resolve_url(s.file_url),
+        file_url=await storage_service.resolve_url_async(s.file_url),
         marks=s.marks,
         feedback=s.feedback,
         submitted_at=s.submitted_at,
@@ -545,7 +545,7 @@ async def submit_assignment(
         await db.rollback()
         raise HTTPException(status_code=409, detail="Submission already exists")
     await db.refresh(submission)
-    return _serialize_submission(submission, student_name=user.name)
+    return await _serialize_submission(submission, student_name=user.name)
 
 
 @router.get(
@@ -570,7 +570,7 @@ async def list_submissions(
     )
     items = result.scalars().unique().all()
     return [
-        _serialize_submission(s, student_name=s.student.name if s.student else None)
+        await _serialize_submission(s, student_name=s.student.name if s.student else None)
         for s in items
     ]
 
@@ -623,7 +623,7 @@ async def grade_submission(
     await db.refresh(submission)
     await db.refresh(grade_notif)
     await notification_service.publish_one(grade_notif)
-    return _serialize_submission(
+    return await _serialize_submission(
         submission, student_name=submission.student.name if submission.student else None
     )
 
@@ -638,7 +638,7 @@ async def list_my_submissions(
         .where(Submission.student_id == user.id)
         .order_by(Submission.submitted_at.desc())
     )
-    return [_serialize_submission(s, student_name=user.name) for s in result.scalars().all()]
+    return [await _serialize_submission(s, student_name=user.name) for s in result.scalars().all()]
 
 
 @router.get("/my-assignments", response_model=list[AssignmentOut])

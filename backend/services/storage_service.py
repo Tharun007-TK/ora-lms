@@ -145,6 +145,11 @@ def resolve_url(
 
     Supabase paths are converted to time-limited signed URLs. Local paths
     resolve to the backend ``/files/...`` route.
+
+    NOTE: the supabase signed-URL roundtrip is sync HTTP. Async callers
+    should prefer :func:`resolve_url_async` so they don't block the event
+    loop. Sync callers (CSV exports, local-only paths) can use this
+    function directly.
     """
     if not stored_path:
         return None
@@ -168,6 +173,24 @@ def resolve_url(
         return f"/files/{rel}"
 
     return stored_path
+
+
+async def resolve_url_async(
+    stored_path: str | None,
+    *,
+    ttl_seconds: int = SIGNED_URL_TTL_SECONDS,
+) -> str | None:
+    """Async variant of :func:`resolve_url`.
+
+    Cheap branches (no path / local: / unknown scheme) run inline; the
+    Supabase signed-URL HTTP call is offloaded to a worker thread so it
+    does not block the event loop.
+    """
+    if not stored_path or not stored_path.startswith("supabase://"):
+        return resolve_url(stored_path, ttl_seconds=ttl_seconds)
+    return await asyncio.to_thread(
+        resolve_url, stored_path, ttl_seconds=ttl_seconds
+    )
 
 
 async def upload_image(

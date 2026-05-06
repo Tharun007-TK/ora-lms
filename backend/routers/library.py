@@ -15,14 +15,14 @@ from services import storage_service
 router = APIRouter(prefix="/library", tags=["library"])
 
 
-def _serialize(book: LibraryBook) -> LibraryBookOut:
+async def _serialize(book: LibraryBook) -> LibraryBookOut:
     return LibraryBookOut(
         id=book.id,
         title=book.title,
         author=book.author,
         category=book.category,
-        file_url=storage_service.resolve_url(book.file_url),
-        cover_url=storage_service.resolve_url(book.cover_url),
+        file_url=await storage_service.resolve_url_async(book.file_url),
+        cover_url=await storage_service.resolve_url_async(book.cover_url),
         uploaded_by=book.uploaded_by,
         created_at=book.created_at,
     )
@@ -43,7 +43,7 @@ async def list_books(
         stmt = stmt.where(or_(LibraryBook.title.ilike(like), LibraryBook.author.ilike(like)))
     stmt = stmt.order_by(LibraryBook.created_at.desc())
     result = await db.execute(stmt)
-    return [_serialize(b) for b in result.scalars().all()]
+    return [await _serialize(b) for b in result.scalars().all()]
 
 
 @router.get("/categories", response_model=list[str])
@@ -70,7 +70,7 @@ async def get_book(
     book = result.scalar_one_or_none()
     if book is None:
         raise HTTPException(status_code=404, detail="Book not found")
-    return _serialize(book)
+    return await _serialize(book)
 
 
 @router.post("", response_model=LibraryBookOut, status_code=status.HTTP_201_CREATED)
@@ -107,7 +107,7 @@ async def create_book(
     db.add(book)
     await db.commit()
     await db.refresh(book)
-    return _serialize(book)
+    return await _serialize(book)
 
 
 @router.patch("/{book_id}", response_model=LibraryBookOut)
@@ -129,7 +129,7 @@ async def update_book(
         setattr(book, k, v)
     await db.commit()
     await db.refresh(book)
-    return _serialize(book)
+    return await _serialize(book)
 
 
 @router.delete("/{book_id}", response_model=MessageResponse)

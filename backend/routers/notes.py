@@ -49,13 +49,13 @@ async def _ensure_course_access(db: AsyncSession, course: Course, user: User) ->
         raise HTTPException(status_code=403, detail="You are not enrolled in this course")
 
 
-def _serialize(note: Note) -> NoteOut:
+async def _serialize(note: Note) -> NoteOut:
     return NoteOut(
         id=note.id,
         course_id=note.course_id,
         title=note.title,
         content=note.content,
-        file_url=storage_service.resolve_url(note.file_url),
+        file_url=await storage_service.resolve_url_async(note.file_url),
         ai_generated=note.ai_generated,
         created_by=note.created_by,
         created_at=note.created_at,
@@ -74,7 +74,7 @@ async def list_notes(
     result = await db.execute(
         select(Note).where(Note.course_id == course_id).order_by(Note.created_at.desc())
     )
-    return [_serialize(n) for n in result.scalars().all()]
+    return [await _serialize(n) for n in result.scalars().all()]
 
 
 @router.post("", response_model=NoteOut, status_code=status.HTTP_201_CREATED)
@@ -134,7 +134,7 @@ async def create_note(
             link=f"/student/courses/{course_id}/notes",
         )
 
-    return _serialize(note)
+    return await _serialize(note)
 
 
 @router.get("/{note_id}", response_model=NoteOut)
@@ -153,7 +153,7 @@ async def get_note(
     note = result.scalar_one_or_none()
     if note is None:
         raise HTTPException(status_code=404, detail="Note not found")
-    return _serialize(note)
+    return await _serialize(note)
 
 
 @router.delete("/{note_id}", response_model=MessageResponse)
