@@ -119,6 +119,18 @@ class GeneratedNotes:
     char_count: int
 
 
+# Module-level cached LLM clients. Constructing AsyncAnthropic/AsyncGroq
+# per request stood up a fresh httpx pool each time and never set a
+# request timeout — under load that meant Render killed the request at
+# 30s while the SDK happily waited up to 600s. Hoist + cache + bound:
+# 20s per attempt, 2 retries (covers transient 429/5xx via SDK backoff).
+_LLM_REQUEST_TIMEOUT_S: float = 20.0
+_LLM_MAX_RETRIES: int = 2
+
+_anthropic_singleton = None
+_groq_singleton = None
+
+
 def _anthropic_client():
     try:
         from anthropic import AsyncAnthropic  # type: ignore
@@ -132,7 +144,14 @@ def _anthropic_client():
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="ANTHROPIC_API_KEY is not configured",
         )
-    return AsyncAnthropic(api_key=settings.ANTHROPIC_API_KEY)
+    global _anthropic_singleton
+    if _anthropic_singleton is None:
+        _anthropic_singleton = AsyncAnthropic(
+            api_key=settings.ANTHROPIC_API_KEY,
+            timeout=_LLM_REQUEST_TIMEOUT_S,
+            max_retries=_LLM_MAX_RETRIES,
+        )
+    return _anthropic_singleton
 
 
 def _groq_client():
@@ -145,7 +164,14 @@ def _groq_client():
         ) from exc
     if not settings.GROQ_API_KEY:
         return None
-    return AsyncGroq(api_key=settings.GROQ_API_KEY)
+    global _groq_singleton
+    if _groq_singleton is None:
+        _groq_singleton = AsyncGroq(
+            api_key=settings.GROQ_API_KEY,
+            timeout=_LLM_REQUEST_TIMEOUT_S,
+            max_retries=_LLM_MAX_RETRIES,
+        )
+    return _groq_singleton
 
 
 def _extract_text(message) -> str:
@@ -457,19 +483,17 @@ async def stream_rag_answer(
         yield _sse({"type": "done"})
         return
 
-    try:
-        from anthropic import AsyncAnthropic  # type: ignore
-    except ImportError:
-        yield _sse({"type": "error", "detail": "anthropic SDK missing"})
-        yield _sse({"type": "done"})
-        return
-
     context_block = _build_context_block(chunks)
     user_message = (
         f"Course context:\n{context_block}\n\nStudent question: {question}"
     )
 
-    client = AsyncAnthropic(api_key=settings.ANTHROPIC_API_KEY)
+    try:
+        client = _anthropic_client()
+    except HTTPException as exc:
+        yield _sse({"type": "error", "detail": str(exc.detail)})
+        yield _sse({"type": "done"})
+        return
 
     # Bridge the Anthropic stream through a queue so we can interleave
     # keepalive pings while we wait for the first (and subsequent) tokens.
