@@ -56,6 +56,13 @@ class CodingDifficulty(str, enum.Enum):
     hard = "hard"
 
 
+class NoteEmbedStatus(str, enum.Enum):
+    pending = "pending"
+    embedding = "embedding"
+    done = "done"
+    failed = "failed"
+
+
 # ---------- Core entities ----------
 
 
@@ -170,6 +177,15 @@ class Note(Base):
     content: Mapped[str | None] = mapped_column(Text)
     file_url: Mapped[str | None] = mapped_column(String(1024))
     ai_generated: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    embed_status: Mapped[NoteEmbedStatus] = mapped_column(
+        SAEnum(NoteEmbedStatus, name="noteembedstatus"),
+        nullable=False,
+        server_default=NoteEmbedStatus.pending.value,
+        default=NoteEmbedStatus.pending,
+    )
+    retry_count: Mapped[int] = mapped_column(
+        Integer, nullable=False, server_default="0", default=0
+    )
     created_by: Mapped[int | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL")
     )
@@ -710,6 +726,7 @@ __all__ = [
     "CodingScoringMode",
     "CodingSubmissionStatus",
     "CodingDifficulty",
+    "NoteEmbedStatus",
     "CodingAssessment",
     "CodingTestCase",
     "CodingSubmission",

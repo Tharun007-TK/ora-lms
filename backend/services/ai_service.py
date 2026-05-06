@@ -14,7 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.config import settings
 from core.database import SessionLocal
-from models.tables import Note, NoteEmbedding
+from models.tables import Note, NoteEmbedding, NoteEmbedStatus
 
 
 log = logging.getLogger(__name__)
@@ -367,8 +367,16 @@ async def embed_note(note_id: int) -> int:
     """Background task: chunk + embed + upsert into ``note_embeddings``.
 
     Returns the number of chunks indexed. Swallows errors so a failed embed
-    never crashes the request that scheduled it; logs instead.
+    never crashes the request that scheduled it; logs instead and marks the
+    note as ``failed`` so a future retry pass can pick it up.
+
+    Connection discipline: do NOT hold a DB session while the HF embedder
+    runs (~100ms-2s under load, GIL-bound). Open the session only to read
+    the source text and mark status, close it, run the embedding compute,
+    then open a second session for the write.
     """
+    # 1. Read source text + flip status to 'embedding'. Short-lived session.
+    source: str = ""
     try:
         async with SessionLocal() as db:
             note = (
@@ -376,26 +384,44 @@ async def embed_note(note_id: int) -> int:
             ).scalar_one_or_none()
             if note is None:
                 return 0
-            # Prefer content; fall back to nothing if no text (file-only note).
             source = (note.content or "").strip()
             if not source:
+                # File-only note — nothing to embed; mark done so retry
+                # passes don't keep picking it up.
+                note.embed_status = NoteEmbedStatus.done
+                await db.commit()
                 return 0
+            note.embed_status = NoteEmbedStatus.embedding
+            await db.commit()
+    except Exception:
+        log.exception("embed_note read phase failed for note_id=%s", note_id)
+        await _mark_failed(note_id)
+        return 0
 
-            chunks = _embed_chunks(source)
-            if not chunks:
-                return 0
+    # 2. Compute embeddings WITHOUT holding a DB session.
+    try:
+        chunks = _embed_chunks(source)
+        if not chunks:
+            await _mark_failed(note_id)
+            return 0
+        vectors = await _embed_texts(chunks)
+        if len(vectors) != len(chunks):
+            log.warning(
+                "Embedding dim mismatch for note %s: %d chunks, %d vectors",
+                note_id,
+                len(chunks),
+                len(vectors),
+            )
+            await _mark_failed(note_id)
+            return 0
+    except Exception:
+        log.exception("embed_note compute phase failed for note_id=%s", note_id)
+        await _mark_failed(note_id)
+        return 0
 
-            vectors = await _embed_texts(chunks)
-            if len(vectors) != len(chunks):
-                log.warning(
-                    "Embedding dim mismatch for note %s: %d chunks, %d vectors",
-                    note_id,
-                    len(chunks),
-                    len(vectors),
-                )
-                return 0
-
-            # Replace any existing embeddings for this note.
+    # 3. Persist vectors + flip status to 'done'. Second short-lived session.
+    try:
+        async with SessionLocal() as db:
             await db.execute(
                 delete(NoteEmbedding).where(NoteEmbedding.note_id == note_id)
             )
@@ -405,11 +431,37 @@ async def embed_note(note_id: int) -> int:
                     for c, v in zip(chunks, vectors)
                 ]
             )
+            note = (
+                await db.execute(select(Note).where(Note.id == note_id))
+            ).scalar_one_or_none()
+            if note is not None:
+                note.embed_status = NoteEmbedStatus.done
             await db.commit()
             return len(chunks)
     except Exception:
-        log.exception("embed_note failed for note_id=%s", note_id)
+        log.exception("embed_note write phase failed for note_id=%s", note_id)
+        await _mark_failed(note_id)
         return 0
+
+
+async def _mark_failed(note_id: int) -> None:
+    """Mark a note as failed and bump retry_count. Best-effort: any error
+    here is logged but never re-raised (this is itself the failure path).
+    """
+    try:
+        async with SessionLocal() as db:
+            note = (
+                await db.execute(select(Note).where(Note.id == note_id))
+            ).scalar_one_or_none()
+            if note is None:
+                return
+            note.embed_status = NoteEmbedStatus.failed
+            note.retry_count = (note.retry_count or 0) + 1
+            await db.commit()
+    except Exception:  # pragma: no cover - logged-and-swallowed
+        log.exception(
+            "embed_note: failed to mark note %s as failed", note_id
+        )
 
 
 # ---------- RAG retrieval ----------
