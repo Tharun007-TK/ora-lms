@@ -251,9 +251,7 @@ async def generate_notes_from_pdf(file_bytes: bytes, *, max_chunks: int = 6) -> 
     if settings.ANTHROPIC_API_KEY:
         provider = "anthropic"
         client = _anthropic_client()
-        sections = await asyncio.gather(
-            *(_structure_chunk_anthropic(client, c, index=i, total=total) for i, c in enumerate(chunks))
-        )
+        worker = _structure_chunk_anthropic
     else:
         groq = _groq_client()
         if groq is None:
@@ -262,9 +260,26 @@ async def generate_notes_from_pdf(file_bytes: bytes, *, max_chunks: int = 6) -> 
                 detail="No notes provider configured: set ANTHROPIC_API_KEY or GROQ_API_KEY",
             )
         provider = "groq"
-        sections = await asyncio.gather(
-            *(_structure_chunk_groq(groq, c, index=i, total=total) for i, c in enumerate(chunks))
-        )
+        client = groq
+        worker = _structure_chunk_groq
+
+    # TaskGroup: if any chunk raises, sibling tasks are cancelled
+    # automatically. Previously asyncio.gather propagated the first error
+    # but let the others run to completion -- billed Anthropic time we
+    # never used.
+    tasks: list[asyncio.Task[str]] = []
+    try:
+        async with asyncio.TaskGroup() as tg:
+            for i, c in enumerate(chunks):
+                tasks.append(
+                    tg.create_task(worker(client, c, index=i, total=total))
+                )
+    except* HTTPException as eg:
+        # _structure_chunk_* already wraps provider errors as HTTPException;
+        # surface the first one to preserve existing 502 behaviour.
+        raise eg.exceptions[0]
+
+    sections = [t.result() for t in tasks]
 
     body = "\n\n---\n\n".join(s for s in sections if s)
     if not body.strip():
