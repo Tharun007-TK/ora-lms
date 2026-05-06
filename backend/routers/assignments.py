@@ -61,7 +61,11 @@ from schemas.requests import (
     SubmissionOut,
 )
 from services import notification_service, quiz_service, storage_service
-from services.docx_quiz_parser import DocxParseError, parse_docx_quiz
+from services.docx_quiz_parser import (
+    DocxParseError,
+    parse_docx_quiz,
+    parse_pptx_quiz,
+)
 
 
 def _csv_response(filename: str, rows: list[list]) -> StreamingResponse:
@@ -285,6 +289,7 @@ async def create_assignment(
 
 _DOCX_CONTENT_TYPES = {
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation",
     "application/octet-stream",  # some browsers send this
 }
 _DOCX_MAX_BYTES = 5 * 1024 * 1024  # 5 MB
@@ -305,18 +310,23 @@ async def import_quiz_from_docx(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(require_faculty_or_admin),
 ) -> AssignmentOut:
-    """Parse an uploaded .docx file and create a full quiz assignment in
-    one step — questions, options, and correct answers extracted
-    automatically. See ``ml_sample_quiz.docx`` for the expected layout."""
+    """Parse an uploaded .docx or .pptx file and create a full quiz
+    assignment in one step — questions, options, and correct answers
+    extracted automatically. See ``ml_sample_quiz.docx`` for the expected
+    layout."""
     course = await _get_course_or_404(db, course_id)
     if user.role == UserRole.faculty and course.faculty_id != user.id:
         raise HTTPException(status_code=403, detail="Not your course")
 
     filename = (file.filename or "").lower()
-    if not filename.endswith(".docx"):
+    if filename.endswith(".docx"):
+        kind = "docx"
+    elif filename.endswith(".pptx"):
+        kind = "pptx"
+    else:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Only .docx files are supported",
+            detail="Only .docx and .pptx files are supported",
         )
     if file.content_type and file.content_type not in _DOCX_CONTENT_TYPES:
         raise HTTPException(
@@ -334,7 +344,7 @@ async def import_quiz_from_docx(
         )
 
     try:
-        parsed = parse_docx_quiz(data)
+        parsed = parse_pptx_quiz(data) if kind == "pptx" else parse_docx_quiz(data)
     except DocxParseError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 

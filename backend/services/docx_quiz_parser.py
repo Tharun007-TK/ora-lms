@@ -1,4 +1,4 @@
-"""Parse a .docx file into a structured MCQ quiz.
+"""Parse a .docx or .pptx file into a structured MCQ quiz.
 
 Expected layout (see ``ml_sample_quiz.docx``)::
 
@@ -58,7 +58,17 @@ class ParsedQuiz:
 
 
 class DocxParseError(Exception):
-    """Raised when the docx cannot be opened or contains no questions."""
+    """Raised when the docx/pptx cannot be opened or contains no questions."""
+
+
+def _decode_xml_entities(text: str) -> str:
+    return (
+        text.replace("&amp;", "&")
+        .replace("&lt;", "<")
+        .replace("&gt;", ">")
+        .replace("&quot;", '"')
+        .replace("&apos;", "'")
+    )
 
 
 def _extract_paragraphs(data: bytes) -> list[str]:
@@ -77,15 +87,51 @@ def _extract_paragraphs(data: bytes) -> list[str]:
     for match in re.finditer(r"<w:p\b[^>]*>(.*?)</w:p>", xml, flags=re.S):
         body = match.group(1)
         runs = re.findall(r"<w:t[^>]*>([^<]*)</w:t>", body)
-        text = "".join(runs)
-        text = (
-            text.replace("&amp;", "&")
-            .replace("&lt;", "<")
-            .replace("&gt;", ">")
-            .replace("&quot;", '"')
-            .replace("&apos;", "'")
-        )
+        text = _decode_xml_entities("".join(runs))
         paragraphs.append(text.strip())
+    return paragraphs
+
+
+def _extract_pptx_paragraphs(data: bytes) -> list[str]:
+    """Extract paragraphs from a .pptx by walking slides in order.
+
+    Within each slide, each ``<a:p>`` becomes one logical paragraph; line
+    breaks inside a paragraph (``<a:br/>``) are split into separate paragraphs
+    so numbered questions/options stay on their own lines like in .docx.
+    """
+    try:
+        with ZipFile(BytesIO(data)) as z:
+            slide_names = sorted(
+                (n for n in z.namelist()
+                 if n.startswith("ppt/slides/slide") and n.endswith(".xml")),
+                key=lambda n: int(re.search(r"slide(\d+)\.xml$", n).group(1))
+                if re.search(r"slide(\d+)\.xml$", n) else 0,
+            )
+            if not slide_names:
+                raise DocxParseError(
+                    "Not a valid .pptx file (no slides found)"
+                )
+            slide_xmls = [
+                z.read(name).decode("utf-8", errors="replace")
+                for name in slide_names
+            ]
+    except BadZipFile as exc:
+        raise DocxParseError("Not a valid .pptx file") from exc
+
+    paragraphs: list[str] = []
+    for xml in slide_xmls:
+        for p_match in re.finditer(r"<a:p\b[^>]*>(.*?)</a:p>", xml, flags=re.S):
+            body = p_match.group(1)
+            # Split on explicit line breaks so each "1. ...", "a. ..." line
+            # ends up on its own paragraph as the parser expects.
+            segments = re.split(r"<a:br\b[^/]*/?>", body)
+            for seg in segments:
+                runs = re.findall(r"<a:t[^>]*>([^<]*)</a:t>", seg)
+                text = _decode_xml_entities("".join(runs))
+                paragraphs.append(text.strip())
+        # Blank line between slides so a question on a new slide is not
+        # accidentally appended to the previous question's text.
+        paragraphs.append("")
     return paragraphs
 
 
@@ -109,7 +155,19 @@ def parse_docx_quiz(data: bytes) -> ParsedQuiz:
 
     Raises :class:`DocxParseError` if the document cannot be opened or if
     no questions are found."""
-    paragraphs = _extract_paragraphs(data)
+    return _parse_paragraphs_to_quiz(_extract_paragraphs(data))
+
+
+def parse_pptx_quiz(data: bytes) -> ParsedQuiz:
+    """Parse pptx bytes into a :class:`ParsedQuiz`.
+
+    Treats each slide's text frames as paragraphs in slide order, then runs
+    the same line-based parser used for docx. Raises :class:`DocxParseError`
+    if the file cannot be opened or no questions are found."""
+    return _parse_paragraphs_to_quiz(_extract_pptx_paragraphs(data))
+
+
+def _parse_paragraphs_to_quiz(paragraphs: list[str]) -> ParsedQuiz:
     if not paragraphs:
         raise DocxParseError("Document appears to be empty")
 

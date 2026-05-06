@@ -65,7 +65,7 @@ export default function GenerateNotesPage() {
         <h1 className="text-2xl font-semibold">AI Notes Maker</h1>
         <p className="text-sm text-[var(--text-secondary)]">
           Upload a chapter PDF. Groq converts the raw content into structured,
-          student-ready Markdown notes.
+          student-ready plain-text notes.
         </p>
       </header>
 

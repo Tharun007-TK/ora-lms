@@ -194,9 +194,9 @@ export default function NewQuizAssessmentPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Or, import the whole quiz from .docx</CardTitle>
+          <CardTitle>Or, import the whole quiz from .docx or .pptx</CardTitle>
           <CardDescription>
-            Upload a Word document formatted like{' '}
+            Upload a Word document or PowerPoint deck formatted like{' '}
             <a
               href="/ml_sample_quiz.docx"
               download
@@ -214,11 +214,11 @@ export default function NewQuizAssessmentPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="q-docx">.docx file</Label>
+            <Label htmlFor="q-docx">.docx or .pptx file</Label>
             <Input
               id="q-docx"
               type="file"
-              accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+              accept=".docx,.pptx,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.presentationml.presentation"
               onChange={(e) => {
                 const f = e.target.files?.[0] ?? null;
                 setDocxFile(f);
@@ -249,7 +249,7 @@ export default function NewQuizAssessmentPage() {
             disabled={importing || !docxFile}
             loading={importing}
           >
-            {importing ? 'Importing…' : 'Import quiz from .docx'}
+            {importing ? 'Importing…' : 'Import quiz from .docx / .pptx'}
           </Button>
         </CardFooter>
       </Card>
