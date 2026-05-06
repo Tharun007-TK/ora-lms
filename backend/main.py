@@ -29,7 +29,7 @@ from routers import notes as notes_router
 from routers import notifications as notifications_router
 from routers import profile as profile_router
 from routers import users as users_router
-from services import storage_service
+from services import ai_service, storage_service
 from services.judge0_client import judge0_client
 
 
@@ -51,6 +51,12 @@ async def lifespan(app: FastAPI):
     # thread so the migration owns its own loop.
     if os.getenv("RUN_MIGRATIONS_ON_STARTUP", "false").lower() == "true":
         await asyncio.to_thread(_run_migrations)
+
+    # Pre-load the HF embedder so the first RAG request does not pay the
+    # 30-60s model-load cost mid-stream. Best-effort: failure logs and
+    # falls back to lazy-load on first use.
+    await ai_service.warm_embedder()
+
     yield
     await engine.dispose()
 

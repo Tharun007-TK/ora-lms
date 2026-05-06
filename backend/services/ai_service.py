@@ -328,6 +328,29 @@ async def _get_hf_embedder():
         return _hf_embedder
 
 
+async def warm_embedder() -> bool:
+    """Pre-load the HF embedder during app startup.
+
+    The first call into ``_embed_texts`` otherwise pays a 30-60s model load
+    cost — long enough that the in-flight RAG SSE stream times out before the
+    first token. Run this from the FastAPI lifespan so the warmup is amortised
+    across the worker's whole lifetime, not the first user's request.
+
+    Returns True on success, False on failure (logged but not raised — a
+    failed warmup must not crash the worker; lazy-load fallback still works).
+    """
+    try:
+        embedder = await _get_hf_embedder()
+        # Run a tiny inference so transformer weights actually map to RAM,
+        # not just the wrapper. ~1ms after the model is loaded.
+        await asyncio.to_thread(embedder.get_text_embedding, "warmup")
+        log.info("HF embedder warmup complete")
+        return True
+    except Exception:  # pragma: no cover - best-effort
+        log.exception("HF embedder warmup failed; will lazy-load on first request")
+        return False
+
+
 async def _embed_texts(texts: list[str]) -> list[list[float]]:
     if not texts:
         return []
@@ -468,17 +491,30 @@ async def stream_rag_answer(
     yield _sse_ping()
 
     # Retrieve in a fresh session so we don't hold the request's session open
-    # while we stream.
+    # while we stream. Run retrieval as a background task so we can interleave
+    # SSE keepalive pings — without these, a cold HF embedder load (~30-60s on
+    # first request after worker boot) silently exceeds the proxy idle timeout.
     retrieval_failed = False
-    async with SessionLocal() as db:
-        try:
-            chunks = await retrieve_course_context(
+
+    async def _do_retrieve() -> list[RetrievedChunk]:
+        async with SessionLocal() as db:
+            return await retrieve_course_context(
                 db, course_id=course_id, question=question
             )
-        except Exception:
-            log.exception("retrieval failed")
-            chunks = []
-            retrieval_failed = True
+
+    retrieval_task = asyncio.create_task(_do_retrieve())
+    while not retrieval_task.done():
+        try:
+            await asyncio.wait_for(asyncio.shield(retrieval_task), timeout=15.0)
+        except asyncio.TimeoutError:
+            yield _sse_ping()
+
+    try:
+        chunks = retrieval_task.result()
+    except Exception:
+        log.exception("retrieval failed")
+        chunks = []
+        retrieval_failed = True
 
     if retrieval_failed:
         # Surface the retrieval miss to the client instead of silently
