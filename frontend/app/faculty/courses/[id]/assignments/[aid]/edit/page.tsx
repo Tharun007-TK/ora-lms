@@ -168,16 +168,25 @@ export default function QuizEditPage() {
     <div className="space-y-6">
       <header className="space-y-2">
         <Link
-          href="/faculty/assessments"
+          href={`/faculty/courses/${courseId}/assignments`}
           className="text-xs text-[var(--text-secondary)] hover:underline"
         >
-          ← Back to assessments
+          ← Back to course assignments
         </Link>
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-2">
           <h1 className="text-2xl font-semibold">Quiz: {title}</h1>
-          <Button variant="secondary" onClick={() => setPreview((p) => !p)}>
-            {preview ? 'Exit preview' : 'Preview as student'}
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button asChild variant="secondary">
+              <Link
+                href={`/faculty/courses/${courseId}/assignments/${aid}/leaderboard`}
+              >
+                View Leaderboard
+              </Link>
+            </Button>
+            <Button variant="secondary" onClick={() => setPreview((p) => !p)}>
+              {preview ? 'Exit preview' : 'Preview as student'}
+            </Button>
+          </div>
         </div>
         {attemptsLocked && (
           <p className="t-caption text-[var(--danger-fg)]">

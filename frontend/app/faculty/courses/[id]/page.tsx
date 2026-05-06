@@ -79,7 +79,7 @@ export default function FacultyCourseDetailPage() {
           </CardHeader>
           <CardContent className="flex flex-col gap-2">
             <Button asChild variant="secondary">
-              <Link href="/faculty/assessments">
+              <Link href={`/faculty/courses/${course.id}/assignments`}>
                 Go to Assessments
               </Link>
             </Button>

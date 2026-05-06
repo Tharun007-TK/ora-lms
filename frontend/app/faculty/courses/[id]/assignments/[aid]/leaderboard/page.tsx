@@ -74,10 +74,10 @@ export default function QuizLeaderboardPage() {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <Link
-            href="/faculty/assessments"
+            href={`/faculty/courses/${courseId}/assignments`}
             className="text-xs text-[var(--text-secondary)] hover:underline"
           >
-            ← Back to assessments
+            ← Back to course assignments
           </Link>
           <h1 className="mt-1 text-2xl font-semibold">Quiz Leaderboard</h1>
           {!loading && !error && (
@@ -87,6 +87,11 @@ export default function QuizLeaderboardPage() {
           )}
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <Button asChild size="sm" variant="secondary">
+            <Link href={`/faculty/courses/${courseId}/assignments/${aid}/edit`}>
+              Edit Quiz
+            </Link>
+          </Button>
           <Button
             variant="secondary"
             size="sm"
