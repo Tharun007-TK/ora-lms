@@ -454,6 +454,7 @@ async def stream_rag_answer(
 
     # Retrieve in a fresh session so we don't hold the request's session open
     # while we stream.
+    retrieval_failed = False
     async with SessionLocal() as db:
         try:
             chunks = await retrieve_course_context(
@@ -462,6 +463,18 @@ async def stream_rag_answer(
         except Exception:
             log.exception("retrieval failed")
             chunks = []
+            retrieval_failed = True
+
+    if retrieval_failed:
+        # Surface the retrieval miss to the client instead of silently
+        # answering with no course context. The frontend can then show a
+        # banner; the assistant continues with a general answer.
+        yield _sse(
+            {
+                "type": "warning",
+                "detail": "retrieval failed",
+            }
+        )
 
     yield _sse(
         {
