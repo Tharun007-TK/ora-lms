@@ -35,6 +35,7 @@ interface Row {
   courseTitle: string | null;
   subline: string;
   href: string;
+  leaderboardHref?: string;
   badge?: {
     tone: 'ember' | 'neutral' | 'success' | 'warning' | 'danger';
     text: string;
@@ -113,6 +114,10 @@ export default function FacultyAssessmentsPage() {
           a.type === 'quiz'
             ? `/faculty/courses/${a.course_id}/assignments/${a.id}/edit`
             : `/faculty/courses/${a.course_id}/assignments/${a.id}/submissions`,
+        leaderboardHref:
+          a.type === 'quiz'
+            ? `/faculty/courses/${a.course_id}/assignments/${a.id}/leaderboard`
+            : undefined,
         badge: {
           tone: a.type === 'quiz' ? 'ember' : 'neutral',
           text: a.type === 'quiz' ? 'Quiz' : 'File',
@@ -253,11 +258,18 @@ export default function FacultyAssessmentsPage() {
                     </span>
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="mt-auto flex items-center justify-between gap-2">
+                <CardContent className="mt-auto flex flex-wrap items-center justify-between gap-2">
                   {!isPractice ? (
-                    <Button asChild variant="secondary" size="sm">
-                      <Link href={r.href}>Open</Link>
-                    </Button>
+                    <div className="flex flex-wrap gap-2">
+                      <Button asChild variant="secondary" size="sm">
+                        <Link href={r.href}>Open</Link>
+                      </Button>
+                      {r.leaderboardHref && (
+                        <Button asChild variant="ghost" size="sm">
+                          <Link href={r.leaderboardHref}>Leaderboard</Link>
+                        </Button>
+                      )}
+                    </div>
                   ) : (
                     <span className="t-caption text-[var(--text-muted)]">
                       Live in /student/practice
