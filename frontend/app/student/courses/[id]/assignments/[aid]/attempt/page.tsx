@@ -11,6 +11,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ora';
+import { useBreadcrumbs } from '@/components/breadcrumbs';
 import { QuestionReview } from '@/components/question-review';
 import {
   quiz,
@@ -147,6 +148,13 @@ export default function QuizAttemptPage() {
       .catch((err: Error) => setError(err.message || 'Failed to start attempt'))
       .finally(() => setLoading(false));
   }, [aid]);
+
+  useBreadcrumbs([
+    { label: 'Courses', href: '/student/courses' },
+    { label: 'Course', href: `/student/courses/${courseId}` },
+    { label: 'Assignments', href: `/student/courses/${courseId}/assignments` },
+    { label: 'Quiz' },
+  ]);
 
   const question = attempt?.questions[idx];
   const total = attempt?.questions.length ?? 0;

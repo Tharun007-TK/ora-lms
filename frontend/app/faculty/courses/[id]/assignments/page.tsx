@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 import { AssignmentCard } from '@/components/assignment-card';
+import { useBreadcrumbs } from '@/components/breadcrumbs';
 import {
   Badge,
   Button,
@@ -63,6 +64,12 @@ export default function FacultyAssignmentsPage() {
       cancelled = true;
     };
   }, [courseId]);
+
+  useBreadcrumbs([
+    { label: 'Courses', href: '/faculty/courses' },
+    { label: 'Course', href: `/faculty/courses/${courseId}` },
+    { label: 'Assignments' },
+  ]);
 
   return (
     <div className="space-y-6">

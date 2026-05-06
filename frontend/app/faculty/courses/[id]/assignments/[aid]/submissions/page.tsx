@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
+import { useBreadcrumbs } from '@/components/breadcrumbs';
 import { Button } from '@/components/ora';
 import {
   Card,
@@ -85,6 +86,14 @@ export default function FacultySubmissionsPage() {
     if (Number.isFinite(aid)) load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [aid]);
+
+  useBreadcrumbs([
+    { label: 'Courses', href: '/faculty/courses' },
+    { label: 'Course', href: `/faculty/courses/${courseId}` },
+    { label: 'Assignments', href: `/faculty/courses/${courseId}/assignments` },
+    { label: assignment?.title ?? '…', title: assignment?.title },
+    { label: 'Submissions' },
+  ]);
 
   const grade = async (submissionId: number) => {
     const draft = drafts[submissionId];

@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
+import { useBreadcrumbs } from '@/components/breadcrumbs';
 import { Button } from '@/components/ora';
 import {
   Card,
@@ -38,6 +39,11 @@ export default function FacultyCourseDetailPage() {
       cancelled = true;
     };
   }, [id]);
+
+  useBreadcrumbs([
+    { label: 'Courses', href: '/faculty/courses' },
+    { label: course?.code ?? '…', title: course?.title },
+  ]);
 
   if (error) return <p className="text-sm text-[var(--danger-fg)]">{error}</p>;
   if (!course) return <p className="text-sm text-[var(--text-secondary)]">Loading…</p>;

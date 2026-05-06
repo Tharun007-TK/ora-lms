@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
+import { useBreadcrumbs } from '@/components/breadcrumbs';
 import {
   Button,
   Card,
@@ -91,6 +92,14 @@ export default function QuizEditPage() {
     if (Number.isFinite(aid)) load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [aid]);
+
+  useBreadcrumbs([
+    { label: 'Courses', href: '/faculty/courses' },
+    { label: 'Course', href: `/faculty/courses/${courseId}` },
+    { label: 'Assignments', href: `/faculty/courses/${courseId}/assignments` },
+    { label: title || 'Quiz', title },
+    { label: 'Edit' },
+  ]);
 
   const addOption = () => {
     if (draft.options.length >= 6) return;

@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
+import { useBreadcrumbs } from '@/components/breadcrumbs';
 import { NoteCard } from '@/components/note-card';
 import { Button } from '@/components/ora';
 import {
@@ -45,6 +46,12 @@ export default function FacultyNotesPage() {
     if (Number.isFinite(courseId)) load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [courseId]);
+
+  useBreadcrumbs([
+    { label: 'Courses', href: '/faculty/courses' },
+    { label: 'Course', href: `/faculty/courses/${courseId}` },
+    { label: 'Notes' },
+  ]);
 
   const submit = async () => {
     setSaving(true);

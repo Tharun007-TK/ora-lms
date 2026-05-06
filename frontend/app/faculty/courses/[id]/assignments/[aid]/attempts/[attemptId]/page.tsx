@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
+import { useBreadcrumbs } from '@/components/breadcrumbs';
 import { Card, CardContent } from '@/components/ora';
 import { QuestionReview } from '@/components/question-review';
 import { quiz, type QuizAttemptDetail } from '@/lib/api';
@@ -26,6 +27,18 @@ export default function FacultyAttemptDetailPage() {
       .catch((err: Error) => setError(err.message || 'Failed to load'))
       .finally(() => setLoading(false));
   }, [aid, attemptId]);
+
+  useBreadcrumbs([
+    { label: 'Courses', href: '/faculty/courses' },
+    { label: 'Course', href: `/faculty/courses/${courseId}` },
+    { label: 'Assignments', href: `/faculty/courses/${courseId}/assignments` },
+    { label: 'Quiz', href: `/faculty/courses/${courseId}/assignments/${aid}/edit` },
+    {
+      label: 'Leaderboard',
+      href: `/faculty/courses/${courseId}/assignments/${aid}/leaderboard`,
+    },
+    { label: detail?.student_name ?? '…' },
+  ]);
 
   const backHref = `/faculty/courses/${courseId}/assignments/${aid}/leaderboard`;
 

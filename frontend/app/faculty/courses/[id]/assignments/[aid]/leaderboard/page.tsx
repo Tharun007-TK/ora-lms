@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
+import { useBreadcrumbs } from '@/components/breadcrumbs';
 import { Button, Card, CardContent, CardHeader, CardTitle } from '@/components/ora';
 import {
   analytics,
@@ -66,6 +67,14 @@ export default function QuizLeaderboardPage() {
       .catch((err: Error) => setError(err.message || 'Failed to load'))
       .finally(() => setLoading(false));
   }, [aid]);
+
+  useBreadcrumbs([
+    { label: 'Courses', href: '/faculty/courses' },
+    { label: 'Course', href: `/faculty/courses/${courseId}` },
+    { label: 'Assignments', href: `/faculty/courses/${courseId}/assignments` },
+    { label: 'Quiz', href: `/faculty/courses/${courseId}/assignments/${aid}/edit` },
+    { label: 'Leaderboard' },
+  ]);
 
   const maxScore = attempts[0]?.max_score ?? 0;
 

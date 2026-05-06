@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 import { AssignmentCard } from '@/components/assignment-card';
+import { useBreadcrumbs } from '@/components/breadcrumbs';
 import {
   Badge,
   Card,
@@ -59,6 +60,12 @@ export default function StudentAssignmentsPage() {
     if (Number.isFinite(courseId)) load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [courseId]);
+
+  useBreadcrumbs([
+    { label: 'Courses', href: '/student/courses' },
+    { label: 'Course', href: `/student/courses/${courseId}` },
+    { label: 'Assignments' },
+  ]);
 
   const handleFile = async (assignmentId: number, file: File) => {
     setActiveUpload(assignmentId);

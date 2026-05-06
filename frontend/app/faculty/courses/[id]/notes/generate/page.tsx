@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useState } from 'react';
 
+import { useBreadcrumbs } from '@/components/breadcrumbs';
 import { Button } from '@/components/ora';
 import {
   Card,
@@ -28,6 +29,13 @@ export default function GenerateNotesPage() {
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [preview, setPreview] = useState<Note | null>(null);
+
+  useBreadcrumbs([
+    { label: 'Courses', href: '/faculty/courses' },
+    { label: 'Course', href: `/faculty/courses/${courseId}` },
+    { label: 'Notes', href: `/faculty/courses/${courseId}/notes` },
+    { label: 'AI Notes Maker' },
+  ]);
 
   const onGenerate = async (e: React.FormEvent) => {
     e.preventDefault();

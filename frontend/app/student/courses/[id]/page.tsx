@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 import { AIAssistant } from '@/components/ai-assistant';
+import { useBreadcrumbs } from '@/components/breadcrumbs';
 import { Badge, Button } from '@/components/ora';
 import {
   Card,
@@ -52,6 +53,11 @@ export default function StudentCourseDetailPage() {
       loadCoding();
     }
   }, [id]);
+
+  useBreadcrumbs([
+    { label: 'Courses', href: '/student/courses' },
+    { label: course?.code ?? '…', title: course?.title },
+  ]);
 
   if (error) return <p className="text-sm text-[var(--danger-fg)]">{error}</p>;
   if (!course) return <p className="text-sm text-[var(--text-secondary)]">Loading…</p>;

@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 import { AIAssistant } from '@/components/ai-assistant';
+import { useBreadcrumbs } from '@/components/breadcrumbs';
 import { NoteCard } from '@/components/note-card';
 import { notes, type Note } from '@/lib/api';
 
@@ -32,6 +33,12 @@ export default function StudentNotesPage() {
       cancelled = true;
     };
   }, [courseId]);
+
+  useBreadcrumbs([
+    { label: 'Courses', href: '/student/courses' },
+    { label: 'Course', href: `/student/courses/${courseId}` },
+    { label: 'Notes' },
+  ]);
 
   return (
     <div className="space-y-6">
