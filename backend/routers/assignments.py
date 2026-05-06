@@ -147,6 +147,11 @@ def _serialize_assignment(
     submission: Submission | None = None,
     attempt: QuizAttempt | None = None,
 ) -> AssignmentOut:
+    completed_at = None
+    if submission is not None and submission.submitted_at is not None:
+        completed_at = submission.submitted_at
+    elif attempt is not None and attempt.submitted_at is not None:
+        completed_at = attempt.submitted_at
     return AssignmentOut(
         id=a.id,
         course_id=a.course_id,
@@ -165,6 +170,7 @@ def _serialize_assignment(
         attempt_id=attempt.id if attempt else None,
         score=attempt.score if attempt else None,
         max_score=attempt.max_score if attempt else None,
+        completed_at=completed_at,
     )
 
 

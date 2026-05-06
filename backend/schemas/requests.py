@@ -188,6 +188,10 @@ class AssignmentOut(BaseModel):
     attempt_id: int | None = None
     score: int | None = None
     max_score: int | None = None
+    # When this assignment was completed by the requesting student.
+    # File: submission.submitted_at. Quiz: quiz_attempts.submitted_at.
+    # None if not yet completed.
+    completed_at: datetime | None = None
 
 
 # ---------- Submissions ----------

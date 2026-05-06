@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 
 import { AssignmentCard } from '@/components/assignment-card';
 import { CourseCard } from '@/components/course-card';
-import { Card, CardContent } from '@/components/ora';
+import { Badge, Card, CardContent } from '@/components/ora';
 import {
   assignments,
   coding,
@@ -18,6 +18,7 @@ import {
 export default function StudentDashboardPage() {
   const [myCourses, setMyCourses] = useState<Course[]>([]);
   const [upcoming, setUpcoming] = useState<Assignment[]>([]);
+  const [recent, setRecent] = useState<Assignment[]>([]);
   const [practiceStats, setPracticeStats] = useState<PracticeStats | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -36,14 +37,23 @@ export default function StudentDashboardPage() {
         const lists = await Promise.all(mine.map((c) => assignments.list(c.id)));
         if (cancelled) return;
         const flat = lists.flat();
-        const sorted = flat
+        const upcomingNext = flat
           .filter((a) => !a.submitted)
           .sort(
             (a, b) =>
               new Date(a.due_date).getTime() - new Date(b.due_date).getTime(),
           )
           .slice(0, 5);
-        setUpcoming(sorted);
+        const recentNext = flat
+          .filter((a) => a.submitted)
+          .sort((a, b) => {
+            const ta = a.completed_at ? new Date(a.completed_at).getTime() : 0;
+            const tb = b.completed_at ? new Date(b.completed_at).getTime() : 0;
+            return tb - ta;
+          })
+          .slice(0, 5);
+        setUpcoming(upcomingNext);
+        setRecent(recentNext);
       } catch (err) {
         if (!cancelled) {
           setError(err instanceof Error ? err.message : 'Unable to load dashboard');
@@ -56,6 +66,30 @@ export default function StudentDashboardPage() {
       cancelled = true;
     };
   }, []);
+
+  const courseTitleById = (id: number) =>
+    myCourses.find((c) => c.id === id)?.title ?? 'Course';
+
+  const resultHref = (a: Assignment) =>
+    a.type === 'quiz'
+      ? `/student/courses/${a.course_id}/assignments/${a.id}/attempt`
+      : `/student/courses/${a.course_id}/assignments`;
+
+  const formatScore = (a: Assignment) => {
+    if (a.type === 'quiz') {
+      const s = a.score ?? 0;
+      const m = a.max_score ?? a.max_marks;
+      return `${s}/${m}`;
+    }
+    if (a.marks != null) return `${a.marks}/${a.max_marks}`;
+    return 'Awaiting grade';
+  };
+
+  const formatCompletedOn = (a: Assignment) => {
+    if (!a.completed_at) return 'Completed';
+    const d = new Date(a.completed_at);
+    return `Completed ${d.toLocaleDateString()}`;
+  };
 
   return (
     <div className="space-y-8">
@@ -133,6 +167,44 @@ export default function StudentDashboardPage() {
               />
             ))}
           </div>
+        )}
+      </section>
+
+      <section>
+        <h2 className="mb-4 text-xl font-semibold">Recent results</h2>
+        {recent.length === 0 ? (
+          <p className="text-sm text-[var(--text-secondary)]">
+            No completed assignments yet.
+          </p>
+        ) : (
+          <Card>
+            <CardContent className="divide-y divide-[var(--border-subtle)] p-0">
+              {recent.map((a) => (
+                <Link
+                  key={a.id}
+                  href={resultHref(a)}
+                  className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 transition-colors hover:bg-[var(--surface-sunken)]/40 focus-ora"
+                >
+                  <div className="min-w-0 space-y-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="t-body font-medium text-[var(--ink)]">
+                        {a.title}
+                      </span>
+                      <Badge tone={a.type === 'quiz' ? 'ember' : 'neutral'}>
+                        {a.type === 'quiz' ? 'Quiz' : 'File'}
+                      </Badge>
+                    </div>
+                    <p className="t-caption text-[var(--text-muted)]">
+                      {courseTitleById(a.course_id)} · {formatCompletedOn(a)}
+                    </p>
+                  </div>
+                  <span className="t-body font-semibold text-[var(--ember)]">
+                    {formatScore(a)}
+                  </span>
+                </Link>
+              ))}
+            </CardContent>
+          </Card>
         )}
       </section>
     </div>

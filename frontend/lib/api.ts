@@ -60,6 +60,8 @@ export interface Assignment {
   attempt_id: number | null;
   score: number | null;
   max_score: number | null;
+  /** ISO timestamp; populated only when this student completed the assignment. */
+  completed_at: string | null;
 }
 
 export interface QuizOptionFaculty {
