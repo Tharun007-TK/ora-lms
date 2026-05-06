@@ -100,6 +100,8 @@ export interface QuizAttemptStart {
   score: number | null;
   correct_count: number | null;
   questions: QuizQuestionStudent[];
+  /** Populated by the server only when submitted_at is non-null. */
+  answers: QuizAttemptAnswer[] | null;
 }
 
 export interface QuizAttemptAnswer {

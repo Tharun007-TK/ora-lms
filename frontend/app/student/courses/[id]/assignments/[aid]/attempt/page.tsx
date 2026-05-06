@@ -281,10 +281,14 @@ export default function QuizAttemptPage() {
       </div>
     );
 
-  // Already submitted — show infographic using data from startAttempt
+  // Already submitted — show infographic + per-question review using
+  // answers persisted on the attempt (backed by ux-fixes #1).
   if (attempt?.submitted_at && !result) {
     const correctCount = attempt.correct_count ?? 0;
-    const wrongCount = Math.max(0, total - correctCount);
+    const answeredWrong = (attempt.answers ?? []).filter(
+      (a) => !a.is_correct && a.selected_option_ids.length > 0,
+    ).length;
+    const wrongCount = answeredWrong || Math.max(0, total - correctCount);
     return (
       <ResultInfographic
         correct={correctCount}
@@ -293,6 +297,8 @@ export default function QuizAttemptPage() {
         maxScore={attempt.max_score}
         total={total}
         courseId={courseId}
+        questions={attempt.questions}
+        answers={attempt.answers ?? undefined}
       />
     );
   }

@@ -951,15 +951,44 @@ async def start_quiz_attempt(
         await db.refresh(attempt)
 
     correct_count: int | None = None
+    answers: list[QuizAttemptAnswerOut] | None = None
     if attempt.submitted_at is not None:
-        # Compute per-question correct count for the infographic.
-        # Each question has exactly one is_correct value stored across its answer rows.
-        cq_r = await db.execute(
-            select(QuizAnswer.question_id, QuizAnswer.is_correct)
-            .where(QuizAnswer.attempt_id == attempt.id)
-            .distinct(QuizAnswer.question_id)
-        )
-        correct_count = sum(1 for _, is_c in cq_r.all() if is_c)
+        # Build the per-question review block so a returning student sees
+        # the same correct/incorrect markers they saw on submit. Correct
+        # options are safe to expose here because the attempt is closed.
+        ans_rows = (
+            await db.execute(
+                select(
+                    QuizAnswer.question_id,
+                    QuizAnswer.selected_option_id,
+                    QuizAnswer.is_correct,
+                ).where(QuizAnswer.attempt_id == attempt.id)
+            )
+        ).all()
+        selected_by_q: dict[int, list[int]] = {}
+        is_correct_by_q: dict[int, bool] = {}
+        for qid, opt_id, is_c in ans_rows:
+            selected_by_q.setdefault(qid, []).append(opt_id)
+            is_correct_by_q[qid] = bool(is_c)
+
+        answers = []
+        correct_count = 0
+        for q in questions:
+            correct_ids = sorted(o.id for o in q.options if o.is_correct)
+            sel_ids = sorted(selected_by_q.get(q.id, []))
+            is_c = is_correct_by_q.get(q.id, False)
+            if is_c:
+                correct_count += 1
+            answers.append(
+                QuizAttemptAnswerOut(
+                    question_id=q.id,
+                    selected_option_ids=sel_ids,
+                    correct_option_ids=correct_ids,
+                    is_correct=is_c,
+                    points_earned=q.points if is_c else 0,
+                    points_max=q.points,
+                )
+            )
 
     return QuizAttemptStartOut(
         attempt_id=attempt.id,
@@ -970,6 +999,7 @@ async def start_quiz_attempt(
         score=attempt.score,
         correct_count=correct_count,
         questions=[_serialize_question_student(q) for q in questions],
+        answers=answers,
     )
 
 

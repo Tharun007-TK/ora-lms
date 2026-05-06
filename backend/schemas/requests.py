@@ -495,7 +495,13 @@ class QuizQuestionStudentOut(BaseModel):
 
 
 class QuizAttemptStartOut(BaseModel):
-    """Returned when student starts (or resumes) an attempt."""
+    """Returned when student starts (or resumes) an attempt.
+
+    For a *submitted* attempt the response also includes the per-question
+    answer breakdown so the client can render the same review block it
+    shows immediately after submit. For an in-flight attempt ``answers``
+    is None — correct option IDs must NEVER leak before submission.
+    """
     attempt_id: int
     assignment_id: int
     started_at: datetime
@@ -504,6 +510,7 @@ class QuizAttemptStartOut(BaseModel):
     score: int | None = None
     correct_count: int | None = None
     questions: list[QuizQuestionStudentOut]
+    answers: list["QuizAttemptAnswerOut"] | None = None
 
 
 class QuizAnswerIn(BaseModel):
@@ -847,3 +854,4 @@ class CalendarEventUpdate(BaseModel):
 
 
 CodingSubmissionOut.model_rebuild()
+QuizAttemptStartOut.model_rebuild()
