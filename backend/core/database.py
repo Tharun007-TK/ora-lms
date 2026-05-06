@@ -42,6 +42,12 @@ def _build_engine() -> AsyncEngine:
         "echo": settings.DEBUG,
         "pool_pre_ping": True,
         "future": True,
+        # Default pool (5 + 10 overflow) was starving under 64 concurrent
+        # users — some routes hold two sessions per request. Bump both so
+        # the pool absorbs bursty load on a single uvicorn worker without
+        # queueing on get_db().
+        "pool_size": 20,
+        "max_overflow": 20,
     }
     return create_async_engine(url, **kwargs)
 

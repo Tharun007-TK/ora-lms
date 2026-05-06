@@ -17,7 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.auth import get_current_user, require_faculty_or_admin
 from core.config import settings
-from core.database import get_db
+from core.database import SessionLocal, get_db
 from models.tables import Course, Enrollment, Note, User, UserRole
 from schemas.requests import NoteOut
 from services import ai_service, storage_service
@@ -108,31 +108,33 @@ async def generate_notes(
 async def chat_stream(
     course_id: int = Query(..., ge=1),
     question: str = Query(..., min_length=1, max_length=2000),
-    db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ) -> StreamingResponse:
     # Course access — admins ok, faculty must own, students must be enrolled.
-    course = (
-        await db.execute(select(Course).where(Course.id == course_id))
-    ).scalar_one_or_none()
-    if course is None:
-        raise HTTPException(status_code=404, detail="Course not found")
-
-    if user.role == UserRole.faculty and course.faculty_id != user.id:
-        raise HTTPException(status_code=403, detail="Not your course")
-    if user.role == UserRole.student:
-        enrolled = (
-            await db.execute(
-                select(Enrollment.id).where(
-                    Enrollment.course_id == course_id,
-                    Enrollment.student_id == user.id,
-                )
-            )
+    # Open a short-lived session for the auth check only and release it
+    # before streaming starts (stream_rag_answer opens its own session).
+    async with SessionLocal() as db:
+        course = (
+            await db.execute(select(Course).where(Course.id == course_id))
         ).scalar_one_or_none()
-        if enrolled is None:
-            raise HTTPException(
-                status_code=403, detail="You are not enrolled in this course"
-            )
+        if course is None:
+            raise HTTPException(status_code=404, detail="Course not found")
+
+        if user.role == UserRole.faculty and course.faculty_id != user.id:
+            raise HTTPException(status_code=403, detail="Not your course")
+        if user.role == UserRole.student:
+            enrolled = (
+                await db.execute(
+                    select(Enrollment.id).where(
+                        Enrollment.course_id == course_id,
+                        Enrollment.student_id == user.id,
+                    )
+                )
+            ).scalar_one_or_none()
+            if enrolled is None:
+                raise HTTPException(
+                    status_code=403, detail="You are not enrolled in this course"
+                )
 
     stream = ai_service.stream_rag_answer(course_id=course_id, question=question)
     headers = {
