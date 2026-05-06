@@ -136,6 +136,19 @@ export interface QuizAttemptSummary {
   max_score: number | null;
 }
 
+export interface QuizAttemptDetail {
+  attempt_id: number;
+  assignment_id: number;
+  student_id: number;
+  student_name: string | null;
+  started_at: string;
+  submitted_at: string | null;
+  score: number | null;
+  max_score: number | null;
+  questions: QuizQuestionStudent[];
+  answers: QuizAttemptAnswer[];
+}
+
 export interface AssignmentStatsEntry {
   assignment_id: number;
   completed: number;
@@ -1098,6 +1111,10 @@ export const quiz = {
   listAttempts: (assignmentId: number) =>
     apiFetch<QuizAttemptSummary[]>(
       `/assignments/${assignmentId}/quiz/attempts`,
+    ),
+  attemptDetail: (assignmentId: number, attemptId: number) =>
+    apiFetch<QuizAttemptDetail>(
+      `/assignments/${assignmentId}/quiz/attempts/${attemptId}/detail`,
     ),
   exportAttemptsCsvUrl: (assignmentId: number) =>
     `${API_URL}/api/assignments/${assignmentId}/quiz/attempts/export.csv`,

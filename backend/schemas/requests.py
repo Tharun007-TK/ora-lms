@@ -561,6 +561,20 @@ class QuizAttemptSummaryOut(BaseModel):
     max_score: int | None = None
 
 
+class QuizAttemptDetailOut(BaseModel):
+    """Faculty-facing per-student attempt detail with full answer breakdown."""
+    attempt_id: int
+    assignment_id: int
+    student_id: int
+    student_name: str | None = None
+    started_at: datetime
+    submitted_at: datetime | None = None
+    score: int | None = None
+    max_score: int | None = None
+    questions: list[QuizQuestionStudentOut]
+    answers: list[QuizAttemptAnswerOut]
+
+
 class AssignmentStatsOut(BaseModel):
     assignment_id: int
     completed: int

@@ -131,18 +131,22 @@ export default function QuizLeaderboardPage() {
               <tbody>
                 {attempts.map((a, i) => {
                   const pct = maxScore > 0 ? Math.round(((a.score ?? 0) / maxScore) * 100) : 0;
+                  const detailHref = `/faculty/courses/${courseId}/assignments/${aid}/attempts/${a.id}`;
                   return (
                     <tr
                       key={a.id}
-                      className={`border-b border-[var(--border-subtle)] last:border-0 ${
+                      className={`border-b border-[var(--border-subtle)] last:border-0 cursor-pointer transition-colors hover:bg-[var(--surface-sunken)]/40 ${
                         i === 0 ? 'bg-[var(--ember)]/5' : ''
                       }`}
+                      onClick={() => { window.location.href = detailHref; }}
                     >
                       <td className="px-4 py-3 font-semibold text-[var(--text-muted)]">
                         {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1}
                       </td>
-                      <td className="px-4 py-3 font-medium text-[var(--ink)]">
-                        {a.student_name ?? `Student #${a.student_id}`}
+                      <td className="px-4 py-3 font-medium text-[var(--ember)] underline-offset-2 hover:underline">
+                        <Link href={detailHref}>
+                          {a.student_name ?? `Student #${a.student_id}`}
+                        </Link>
                       </td>
                       <td className="px-4 py-3 text-right font-semibold text-[var(--ink)]">
                         {a.score ?? 0}/{maxScore}

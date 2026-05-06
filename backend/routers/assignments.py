@@ -48,6 +48,7 @@ from schemas.requests import (
     GradeSubmissionRequest,
     MessageResponse,
     QuizAttemptAnswerOut,
+    QuizAttemptDetailOut,
     QuizAttemptResultOut,
     QuizAttemptStartOut,
     QuizAttemptSummaryOut,
@@ -1123,6 +1124,81 @@ async def list_quiz_attempts(
         )
         for at in attempts
     ]
+
+
+@router.get(
+    "/assignments/{assignment_id}/quiz/attempts/{attempt_id}/detail",
+    response_model=QuizAttemptDetailOut,
+)
+async def get_quiz_attempt_detail(
+    assignment_id: int,
+    attempt_id: int,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_faculty_or_admin),
+) -> QuizAttemptDetailOut:
+    """Faculty-facing detail view for one student's quiz attempt."""
+    a = await _get_quiz_assignment_or_404(db, assignment_id)
+    await _ensure_faculty_owns(db, a, user)
+
+    r = await db.execute(
+        select(QuizAttempt).where(
+            QuizAttempt.id == attempt_id,
+            QuizAttempt.assignment_id == assignment_id,
+        )
+    )
+    attempt = r.scalar_one_or_none()
+    if attempt is None:
+        raise HTTPException(status_code=404, detail="Attempt not found")
+
+    sr = await db.execute(select(User).where(User.id == attempt.student_id))
+    student = sr.scalar_one_or_none()
+
+    questions = await _load_questions(db, assignment_id)
+
+    answers: list[QuizAttemptAnswerOut] = []
+    if attempt.submitted_at is not None:
+        ans_rows = (
+            await db.execute(
+                select(
+                    QuizAnswer.question_id,
+                    QuizAnswer.selected_option_id,
+                    QuizAnswer.is_correct,
+                ).where(QuizAnswer.attempt_id == attempt.id)
+            )
+        ).all()
+        selected_by_q: dict[int, list[int]] = {}
+        is_correct_by_q: dict[int, bool] = {}
+        for qid, opt_id, is_c in ans_rows:
+            selected_by_q.setdefault(qid, []).append(opt_id)
+            is_correct_by_q[qid] = bool(is_c)
+
+        for q in questions:
+            correct_ids = sorted(o.id for o in q.options if o.is_correct)
+            sel_ids = sorted(selected_by_q.get(q.id, []))
+            is_c = is_correct_by_q.get(q.id, False)
+            answers.append(
+                QuizAttemptAnswerOut(
+                    question_id=q.id,
+                    selected_option_ids=sel_ids,
+                    correct_option_ids=correct_ids,
+                    is_correct=is_c,
+                    points_earned=q.points if is_c else 0,
+                    points_max=q.points,
+                )
+            )
+
+    return QuizAttemptDetailOut(
+        attempt_id=attempt.id,
+        assignment_id=assignment_id,
+        student_id=attempt.student_id,
+        student_name=student.name if student else None,
+        started_at=attempt.started_at,
+        submitted_at=attempt.submitted_at,
+        score=attempt.score,
+        max_score=attempt.max_score,
+        questions=[_serialize_question_student(q) for q in questions],
+        answers=answers,
+    )
 
 
 @router.get(

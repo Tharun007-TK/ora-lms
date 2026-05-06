@@ -27,6 +27,9 @@ import {
   type QuizQuestionFaculty,
 } from '@/lib/api';
 
+const attemptDetailHref = (courseId: number, aid: number, attemptId: number) =>
+  `/faculty/courses/${courseId}/assignments/${aid}/attempts/${attemptId}`;
+
 interface DraftOption {
   option_text: string;
   is_correct: boolean;
@@ -342,8 +345,16 @@ export default function QuizEditPage() {
                 </THead>
                 <TBody>
                   {attempts.map((a) => (
-                    <TR key={a.id}>
-                      <TD>{a.student_name ?? `#${a.student_id}`}</TD>
+                    <TR
+                      key={a.id}
+                      className="cursor-pointer transition-colors hover:bg-[var(--surface-sunken)]/40"
+                      onClick={() => { window.location.href = attemptDetailHref(courseId, aid, a.id); }}
+                    >
+                      <TD className="font-medium text-[var(--ember)] underline-offset-2 hover:underline">
+                        <Link href={attemptDetailHref(courseId, aid, a.id)}>
+                          {a.student_name ?? `#${a.student_id}`}
+                        </Link>
+                      </TD>
                       <TD className="text-[var(--text-secondary)]">
                         {new Date(a.started_at).toLocaleString()}
                       </TD>
