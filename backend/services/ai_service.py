@@ -204,7 +204,8 @@ async def _structure_chunk_groq(client, chunk: str, *, index: int, total: int) -
 
 async def generate_notes_from_pdf(file_bytes: bytes, *, max_chunks: int = 6) -> GeneratedNotes:
     """Extract PDF text, structure via Anthropic (fallback Groq), return Markdown."""
-    text = extract_pdf_text(file_bytes)
+    # PyMuPDF is sync/CPU-bound; offload so it does not freeze the event loop.
+    text = await asyncio.to_thread(extract_pdf_text, file_bytes)
     chunks = chunk_text(text)
     if len(chunks) > max_chunks:
         log.info(
