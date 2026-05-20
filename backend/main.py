@@ -53,6 +53,7 @@ async def _run_migrations_background() -> None:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    hosted = os.getenv("PORT") is not None
     # Alembic's env.py calls asyncio.run(), which crashes if invoked from
     # within a running event loop (the FastAPI lifespan). Run in a worker
     # thread so the migration owns its own loop.
@@ -60,7 +61,7 @@ async def lifespan(app: FastAPI):
         os.getenv("RUN_MIGRATIONS_ON_STARTUP", "false").lower() == "true"
     )
     if run_migrations:
-        if settings.ENVIRONMENT == "production":
+        if hosted or settings.ENVIRONMENT == "production":
             asyncio.create_task(_run_migrations_background())
         else:
             await asyncio.to_thread(_run_migrations)
@@ -69,7 +70,7 @@ async def lifespan(app: FastAPI):
     # 30-60s model-load cost mid-stream. Best-effort: failure logs and
     # falls back to lazy-load on first use. In production, avoid blocking
     # startup; warm in the background unless explicitly enabled.
-    if settings.effective_warm_embedder_on_startup:
+    if settings.effective_warm_embedder_on_startup and not hosted:
         await ai_service.warm_embedder()
     else:
         asyncio.create_task(ai_service.warm_embedder())
