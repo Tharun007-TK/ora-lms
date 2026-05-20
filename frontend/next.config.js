@@ -6,6 +6,12 @@ const withPWA = require('@ducanh2912/next-pwa').default({
   workboxOptions: { skipWaiting: true },
 });
 
+const apiOrigin = (() => {
+  const fromEnv = process.env.API_ORIGIN || '';
+  if (/^https?:\/\//i.test(fromEnv)) return fromEnv.replace(/\/+$/, '');
+  return 'https://ora-lms.onrender.com';
+})();
+
 const nextConfig = {
   reactStrictMode: true,
   transpilePackages: ['tailwind-merge'],
@@ -13,7 +19,7 @@ const nextConfig = {
     return [
       {
         source: '/api/:path*',
-        destination: 'https://ora-lms.onrender.com/:path*',
+        destination: `${apiOrigin}/:path*`,
       },
     ];
   },
