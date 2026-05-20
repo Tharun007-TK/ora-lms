@@ -45,6 +45,9 @@ class Settings(BaseSettings):
     # BAAI/bge-small-en-v1.5 → 384 dims, optimized for retrieval, runs on CPU.
     HF_EMBED_MODEL: str = Field(default="BAAI/bge-small-en-v1.5")
     EMBED_DIM: int = Field(default=384)
+    # Warm embedder on startup (can block server boot). Defaults to True in
+    # non-production, False in production.
+    WARM_EMBEDDER_ON_STARTUP: bool | None = Field(default=None)
     # Kept for backward-compat with deployed envs; no longer consumed.
     OPENAI_API_KEY: str = Field(default="")
     OPENAI_EMBED_MODEL: str = Field(default="text-embedding-3-small")
@@ -89,6 +92,12 @@ class Settings(BaseSettings):
             return self.COOKIE_SAMESITE
         # Cross-origin deployments need SameSite=none (requires Secure=true).
         return "none" if self.ENVIRONMENT == "production" else "lax"
+
+    @property
+    def effective_warm_embedder_on_startup(self) -> bool:
+        if self.WARM_EMBEDDER_ON_STARTUP is not None:
+            return self.WARM_EMBEDDER_ON_STARTUP
+        return self.ENVIRONMENT != "production"
 
 
 @lru_cache

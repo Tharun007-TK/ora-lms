@@ -54,8 +54,12 @@ async def lifespan(app: FastAPI):
 
     # Pre-load the HF embedder so the first RAG request does not pay the
     # 30-60s model-load cost mid-stream. Best-effort: failure logs and
-    # falls back to lazy-load on first use.
-    await ai_service.warm_embedder()
+    # falls back to lazy-load on first use. In production, avoid blocking
+    # startup; warm in the background unless explicitly enabled.
+    if settings.effective_warm_embedder_on_startup:
+        await ai_service.warm_embedder()
+    else:
+        asyncio.create_task(ai_service.warm_embedder())
 
     yield
     await engine.dispose()
