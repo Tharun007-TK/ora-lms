@@ -44,13 +44,26 @@ def _run_migrations() -> None:
     log.info("Alembic upgrade head completed")
 
 
+async def _run_migrations_background() -> None:
+    try:
+        await asyncio.to_thread(_run_migrations)
+    except Exception:  # pragma: no cover - startup safety net
+        log.exception("Alembic upgrade failed in background")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Alembic's env.py calls asyncio.run(), which crashes if invoked from
     # within a running event loop (the FastAPI lifespan). Run in a worker
     # thread so the migration owns its own loop.
-    if os.getenv("RUN_MIGRATIONS_ON_STARTUP", "false").lower() == "true":
-        await asyncio.to_thread(_run_migrations)
+    run_migrations = (
+        os.getenv("RUN_MIGRATIONS_ON_STARTUP", "false").lower() == "true"
+    )
+    if run_migrations:
+        if settings.ENVIRONMENT == "production":
+            asyncio.create_task(_run_migrations_background())
+        else:
+            await asyncio.to_thread(_run_migrations)
 
     # Pre-load the HF embedder so the first RAG request does not pay the
     # 30-60s model-load cost mid-stream. Best-effort: failure logs and
